@@ -1,5 +1,9 @@
 package td.teladoumbaobabtd;
 
+/**
+ * Modèle représentant une publication sur le fil d'actualité.
+ * Contient l'auteur, le texte, l'image ou la vidéo éventuelle, les compteurs de j'aime, commentaires et partages.
+ */
 public class Post {
 
     private int id;
@@ -8,6 +12,7 @@ public class Post {
     private String authorProfileImage;
     private String content;
     private String imagePath;
+    private String videoPath;
     private int likesCount;
     private boolean isLikedByCurrentUser;
     private String userReactionType;
@@ -24,6 +29,7 @@ public class Post {
                 String authorProfileImage,
                 String content,
                 String imagePath,
+                String videoPath,
                 int likesCount,
                 boolean isLikedByCurrentUser,
                 String createdAt) {
@@ -33,6 +39,7 @@ public class Post {
         this.authorProfileImage = authorProfileImage;
         this.content = content;
         this.imagePath = imagePath;
+        this.videoPath = videoPath;
         this.likesCount = likesCount;
         this.isLikedByCurrentUser = isLikedByCurrentUser;
         this.createdAt = createdAt;
@@ -60,6 +67,10 @@ public class Post {
 
     public String getImagePath() {
         return imagePath;
+    }
+
+    public String getVideoPath() {
+        return videoPath;
     }
 
     public int getLikesCount() {
@@ -108,6 +119,10 @@ public class Post {
 
     public void setImagePath(String imagePath) {
         this.imagePath = imagePath;
+    }
+
+    public void setVideoPath(String videoPath) {
+        this.videoPath = videoPath;
     }
 
     public void setLikesCount(int likesCount) {

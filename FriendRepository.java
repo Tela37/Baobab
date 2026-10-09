@@ -5,85 +5,126 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import td.teladoumbaobabtd.DatabaseHelper;
 import td.teladoumbaobabtd.User;
 
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Repository responsable de la gestion des amis, demandes d'amis
+ * et de l'envoi de notifications lors de l'envoi ou de l'acceptation d'une demande.
+ */
 public class FriendRepository {
 
+    public static class FriendRequestItem {
+        public int requestId;
+        public int senderId;
+        public String senderName;
+        public String senderProfileImage;
+        public String createdAt;
+    }
+
+    public static class UserSearchItem {
+        public int userId;
+        public String name;
+        public String profileImage;
+        public boolean isFriend;
+        public boolean requestSent;
+    }
+
     private final DatabaseHelper dbHelper;
+    private final NotificationRepository notificationRepository;
 
     public FriendRepository(Context context) {
         this.dbHelper = new DatabaseHelper(context);
+        this.notificationRepository = new NotificationRepository(context);
     }
 
-    public FriendRepository(DatabaseHelper dbHelper) {
-        this.dbHelper = dbHelper;
-    }
+    public List<FriendRequestItem> getPendingRequests(int receiverId) {
+        List<FriendRequestItem> requests = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-    public boolean sendFriendRequest(int senderId, int receiverId) {
-        if (senderId == receiverId) {
-            return false;
+        String query = "SELECT fr.id, fr.sender_id, fr.created_at, u.name AS sender_name, u.profile_image AS sender_profile_image " +
+                "FROM friend_requests fr " +
+                "JOIN users u ON fr.sender_id = u.id " +
+                "WHERE fr.receiver_id = ? AND fr.status = 'PENDING' " +
+                "ORDER BY fr.created_at DESC";
+
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery(query, new String[]{String.valueOf(receiverId)});
+            while (cursor.moveToNext()) {
+                FriendRequestItem item = new FriendRequestItem();
+                item.requestId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                item.senderId = cursor.getInt(cursor.getColumnIndexOrThrow("sender_id"));
+                item.senderName = cursor.getString(cursor.getColumnIndexOrThrow("sender_name"));
+                item.senderProfileImage = cursor.getString(cursor.getColumnIndexOrThrow("sender_profile_image"));
+                item.createdAt = cursor.getString(cursor.getColumnIndexOrThrow("created_at"));
+                requests.add(item);
+            }
+        } finally {
+            if (cursor != null) cursor.close();
         }
 
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        return requests;
+    }
 
+    /**
+     * Envoie une demande d'ami et génère une notification pour le destinataire.
+     */
+    public boolean sendFriendRequest(int senderId, int receiverId) {
+        if (senderId == receiverId) return false;
+
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("sender_id", senderId);
         values.put("receiver_id", receiverId);
         values.put("status", "PENDING");
 
-        long res = db.insert("friend_requests", null, values);
-        return res != -1;
-    }
-
-    public boolean cancelFriendRequest(int senderId, int receiverId) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        int rows = db.delete("friend_requests", "sender_id=? AND receiver_id=? AND status='PENDING'", new String[]{String.valueOf(senderId), String.valueOf(receiverId)});
-        return rows > 0;
-    }
-
-    public boolean removeFriend(int user1Id, int user2Id) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.beginTransaction();
-        try {
-            db.delete("friends", "(user1_id=? AND user2_id=?) OR (user1_id=? AND user2_id=?)", new String[]{
-                    String.valueOf(user1Id), String.valueOf(user2Id),
-                    String.valueOf(user2Id), String.valueOf(user1Id)
-            });
-            db.setTransactionSuccessful();
+        long id = db.insert("friend_requests", null, values);
+        if (id != -1) {
+            String senderName = getUserName(senderId);
+            notificationRepository.addNotification(
+                    receiverId,
+                    senderId,
+                    "FRIEND_REQUEST",
+                    receiverId,
+                    senderName + " vous a envoyé une demande d'ami."
+            );
             return true;
-        } catch (Exception e) {
-            return false;
-        } finally {
-            db.endTransaction();
         }
+        return false;
     }
 
+    /**
+     * Accepte une demande d'ami et génère une notification pour l'expéditeur de la demande.
+     */
     public boolean acceptFriendRequest(int requestId, int senderId, int receiverId) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         db.beginTransaction();
         try {
-            ContentValues requestValues = new ContentValues();
-            requestValues.put("status", "ACCEPTED");
-            db.update("friend_requests", requestValues, "id=?", new String[]{String.valueOf(requestId)});
+            db.delete("friend_requests", "id = ?", new String[]{String.valueOf(requestId)});
 
-            ContentValues friendValues1 = new ContentValues();
-            friendValues1.put("user1_id", senderId);
-            friendValues1.put("user2_id", receiverId);
-            db.insertWithOnConflict("friends", null, friendValues1, SQLiteDatabase.CONFLICT_IGNORE);
+            ContentValues values = new ContentValues();
+            values.put("user1_id", Math.min(senderId, receiverId));
+            values.put("user2_id", Math.max(senderId, receiverId));
 
-            ContentValues friendValues2 = new ContentValues();
-            friendValues2.put("user1_id", receiverId);
-            friendValues2.put("user2_id", senderId);
-            db.insertWithOnConflict("friends", null, friendValues2, SQLiteDatabase.CONFLICT_IGNORE);
-
+            long id = db.insertWithOnConflict("friends", null, values, SQLiteDatabase.CONFLICT_IGNORE);
             db.setTransactionSuccessful();
-            return true;
-        } catch (Exception e) {
-            return false;
+
+            if (id != -1 && senderId != receiverId) {
+                String receiverName = getUserName(receiverId);
+                notificationRepository.addNotification(
+                        senderId,
+                        receiverId,
+                        "FRIEND_ACCEPT",
+                        senderId,
+                        receiverName + " a accepté votre demande d'ami."
+                );
+            }
+
+            return id != -1;
         } finally {
             db.endTransaction();
         }
@@ -91,168 +132,117 @@ public class FriendRepository {
 
     public boolean declineFriendRequest(int requestId) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("status", "DECLINED");
-
-        int rows = db.update("friend_requests", values, "id=?", new String[]{String.valueOf(requestId)});
+        int rows = db.delete("friend_requests", "id = ?", new String[]{String.valueOf(requestId)});
         return rows > 0;
     }
 
-    public List<FriendRequestItem> getPendingRequests(int userId) {
-        List<FriendRequestItem> list = new ArrayList<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-
-        String sql = "SELECT fr.id AS request_id, fr.sender_id AS sender_id, u.name AS sender_name, u.email AS sender_email, u.profile_image AS sender_profile_image " +
-                "FROM friend_requests fr " +
-                "JOIN users u ON u.id = fr.sender_id " +
-                "WHERE fr.receiver_id = ? AND fr.status = 'PENDING' " +
-                "ORDER BY fr.id DESC";
-
-        Cursor cursor = null;
-        try {
-            cursor = db.rawQuery(sql, new String[]{String.valueOf(userId)});
-            while (cursor.moveToNext()) {
-                int reqId = cursor.getInt(cursor.getColumnIndexOrThrow("request_id"));
-                int senderId = cursor.getInt(cursor.getColumnIndexOrThrow("sender_id"));
-                String name = cursor.getString(cursor.getColumnIndexOrThrow("sender_name"));
-                String email = cursor.getString(cursor.getColumnIndexOrThrow("sender_email"));
-                String profileImg = cursor.getString(cursor.getColumnIndexOrThrow("sender_profile_image"));
-
-                list.add(new FriendRequestItem(reqId, senderId, name, email, profileImg));
-            }
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-
-        return list;
+    public boolean removeFriend(int userId1, int userId2) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        int u1 = Math.min(userId1, userId2);
+        int u2 = Math.max(userId1, userId2);
+        int rows = db.delete("friends", "user1_id = ? AND user2_id = ?", new String[]{String.valueOf(u1), String.valueOf(u2)});
+        return rows > 0;
     }
 
-    public List<User> getFriendsList(int userId, String searchQuery) {
+    public List<User> getFriendsList(int userId, String query) {
         List<User> friends = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        String sql = "SELECT u.id, u.name, u.email, u.profile_image, u.city, u.country " +
-                "FROM friends f " +
-                "JOIN users u ON u.id = f.user2_id " +
-                "WHERE f.user1_id = ? ";
+        String sql = "SELECT u.id, u.name, u.email, u.profile_image FROM users u " +
+                "JOIN friends f ON (u.id = f.user1_id AND f.user2_id = ?) OR (u.id = f.user2_id AND f.user1_id = ?) " +
+                "WHERE u.id != ?";
 
-        if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-            sql += "AND (LOWER(u.name) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?)) ";
+        List<String> selectionArgs = new ArrayList<>();
+        selectionArgs.add(String.valueOf(userId));
+        selectionArgs.add(String.valueOf(userId));
+        selectionArgs.add(String.valueOf(userId));
+
+        if (query != null && !query.trim().isEmpty()) {
+            sql += " AND (u.name LIKE ? OR u.email LIKE ?)";
+            selectionArgs.add("%" + query.trim() + "%");
+            selectionArgs.add("%" + query.trim() + "%");
         }
-
-        sql += "ORDER BY u.name ASC";
 
         Cursor cursor = null;
         try {
-            if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-                String term = "%" + searchQuery.trim() + "%";
-                cursor = db.rawQuery(sql, new String[]{String.valueOf(userId), term, term});
-            } else {
-                cursor = db.rawQuery(sql, new String[]{String.valueOf(userId)});
-            }
-
+            cursor = db.rawQuery(sql, selectionArgs.toArray(new String[0]));
             while (cursor.moveToNext()) {
-                User user = new User(
-                        cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-                        cursor.getString(cursor.getColumnIndexOrThrow("name")),
-                        cursor.getString(cursor.getColumnIndexOrThrow("email")),
-                        cursor.getString(cursor.getColumnIndexOrThrow("profile_image"))
-                );
-                int cityIdx = cursor.getColumnIndex("city");
-                if (cityIdx != -1) user.setCity(cursor.getString(cityIdx));
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
+                String email = cursor.getString(cursor.getColumnIndexOrThrow("email"));
+                String profileImage = cursor.getString(cursor.getColumnIndexOrThrow("profile_image"));
 
-                int countryIdx = cursor.getColumnIndex("country");
-                if (countryIdx != -1) user.setCountry(cursor.getString(countryIdx));
-
-                friends.add(user);
+                friends.add(new User(id, name, email, profileImage));
             }
         } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
+            if (cursor != null) cursor.close();
         }
 
         return friends;
     }
 
-    public List<UserSearchItem> searchUsersToBefriend(int userId, String searchQuery) {
-        List<UserSearchItem> users = new ArrayList<>();
+    public List<UserSearchItem> searchUsersToBefriend(int currentUserId, String query) {
+        List<UserSearchItem> results = new ArrayList<>();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        String sql = "SELECT u.id, u.name, u.email, u.profile_image, u.city, u.country, " +
-                "EXISTS(SELECT 1 FROM friends f WHERE f.user1_id = ? AND f.user2_id = u.id) AS is_friend, " +
-                "EXISTS(SELECT 1 FROM friend_requests fr WHERE fr.sender_id = ? AND fr.receiver_id = u.id AND fr.status = 'PENDING') AS request_sent " +
+        String sql = "SELECT u.id, u.name, u.profile_image, " +
+                "(SELECT COUNT(*) FROM friends WHERE (user1_id = u.id AND user2_id = ?) OR (user1_id = ? AND user2_id = u.id)) AS is_friend, " +
+                "(SELECT COUNT(*) FROM friend_requests WHERE sender_id = ? AND receiver_id = u.id AND status = 'PENDING') AS request_sent " +
                 "FROM users u " +
-                "WHERE u.id != ? ";
+                "WHERE u.id != ?";
 
-        if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-            sql += "AND (LOWER(u.name) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?)) ";
+        List<String> selectionArgs = new ArrayList<>();
+        selectionArgs.add(String.valueOf(currentUserId));
+        selectionArgs.add(String.valueOf(currentUserId));
+        selectionArgs.add(String.valueOf(currentUserId));
+        selectionArgs.add(String.valueOf(currentUserId));
+
+        if (query != null && !query.trim().isEmpty()) {
+            sql += " AND (u.name LIKE ? OR u.email LIKE ?)";
+            selectionArgs.add("%" + query.trim() + "%");
+            selectionArgs.add("%" + query.trim() + "%");
         }
 
-        sql += "ORDER BY u.name ASC";
+        sql += " ORDER BY u.name ASC";
 
         Cursor cursor = null;
         try {
-            String uidStr = String.valueOf(userId);
-            if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-                String term = "%" + searchQuery.trim() + "%";
-                cursor = db.rawQuery(sql, new String[]{uidStr, uidStr, uidStr, term, term});
-            } else {
-                cursor = db.rawQuery(sql, new String[]{uidStr, uidStr, uidStr});
-            }
-
+            cursor = db.rawQuery(sql, selectionArgs.toArray(new String[0]));
             while (cursor.moveToNext()) {
-                int id = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
-                String name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
-                String email = cursor.getString(cursor.getColumnIndexOrThrow("email"));
-                String profileImg = cursor.getString(cursor.getColumnIndexOrThrow("profile_image"));
-                boolean isFriend = cursor.getInt(cursor.getColumnIndexOrThrow("is_friend")) > 0;
-                boolean requestSent = cursor.getInt(cursor.getColumnIndexOrThrow("request_sent")) > 0;
+                UserSearchItem item = new UserSearchItem();
+                item.userId = cursor.getInt(cursor.getColumnIndexOrThrow("id"));
+                item.name = cursor.getString(cursor.getColumnIndexOrThrow("name"));
+                item.profileImage = cursor.getString(cursor.getColumnIndexOrThrow("profile_image"));
+                item.isFriend = cursor.getInt(cursor.getColumnIndexOrThrow("is_friend")) > 0;
+                item.requestSent = cursor.getInt(cursor.getColumnIndexOrThrow("request_sent")) > 0;
 
-                users.add(new UserSearchItem(id, name, email, profileImg, isFriend, requestSent));
+                results.add(item);
             }
         } finally {
-            if (cursor != null) {
-                cursor.close();
+            if (cursor != null) cursor.close();
+        }
+
+        return results;
+    }
+
+    public boolean cancelFriendRequest(int senderId, int receiverId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        int rows = db.delete("friend_requests", "sender_id = ? AND receiver_id = ? AND status = 'PENDING'",
+                new String[]{String.valueOf(senderId), String.valueOf(receiverId)});
+        return rows > 0;
+    }
+
+    private String getUserName(int userId) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT name FROM users WHERE id = ?", new String[]{String.valueOf(userId)});
+            if (cursor.moveToFirst()) {
+                return cursor.getString(0);
             }
-        }
-
-        return users;
-    }
-
-    public static class FriendRequestItem {
-        public final int requestId;
-        public final int senderId;
-        public final String senderName;
-        public final String senderEmail;
-        public final String senderProfileImage;
-
-        public FriendRequestItem(int requestId, int senderId, String senderName, String senderEmail, String senderProfileImage) {
-            this.requestId = requestId;
-            this.senderId = senderId;
-            this.senderName = senderName;
-            this.senderEmail = senderEmail;
-            this.senderProfileImage = senderProfileImage;
-        }
-    }
-
-    public static class UserSearchItem {
-        public final int userId;
-        public final String name;
-        public final String email;
-        public final String profileImage;
-        public final boolean isFriend;
-        public boolean requestSent;
-
-        public UserSearchItem(int userId, String name, String email, String profileImage, boolean isFriend, boolean requestSent) {
-            this.userId = userId;
-            this.name = name;
-            this.email = email;
-            this.profileImage = profileImage;
-            this.isFriend = isFriend;
-            this.requestSent = requestSent;
+            return "Un utilisateur";
+        } finally {
+            if (cursor != null) cursor.close();
         }
     }
 }

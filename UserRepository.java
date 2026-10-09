@@ -3,15 +3,13 @@ package td.teladoumbaobabtd.repository;
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
+
+import td.teladoumbaobabtd.DatabaseHelper;
+import td.teladoumbaobabtd.User;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import td.teladoumbaobabtd.DatabaseHelper;
-import td.teladoumbaobabtd.PasswordUtils;
-import td.teladoumbaobabtd.User;
 
 public class UserRepository {
 
@@ -40,31 +38,18 @@ public class UserRepository {
             String password,
             String profileImage) {
 
-        if (email == null || email.trim().isEmpty()) {
-            return false;
-        }
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-        String normalizedEmail = email.trim().toLowerCase();
+        ContentValues values = new ContentValues();
+        values.put("name", name);
+        values.put("phone", phone);
+        values.put("email", email);
+        values.put("password", password);
+        values.put("profile_image", profileImage);
 
-        try {
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
+        long result = db.insert("users", null, values);
 
-            ContentValues values = new ContentValues();
-            values.put("name", name);
-            values.put("phone", phone);
-            values.put("email", normalizedEmail);
-            values.put("password", password);
-            values.put("profile_image", profileImage);
-
-            long result = db.insert("users", null, values);
-
-            return result != -1;
-        } catch (SQLiteConstraintException e) {
-            return false;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        return result != -1;
     }
 
     public boolean insertFullUser(
@@ -78,54 +63,35 @@ public class UserRepository {
             String country,
             String profileImage) {
 
-        if (email == null || email.trim().isEmpty()) {
-            return false;
-        }
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-        String normalizedEmail = email.trim().toLowerCase();
-        String combinedName = ((lastName != null ? lastName : "") + " " + (firstName != null ? firstName : "")).trim();
-        if (combinedName.isEmpty()) {
-            combinedName = normalizedEmail;
-        }
+        String fullName = ((lastName != null ? lastName : "") + " " + (firstName != null ? firstName : "")).trim();
 
-        try {
-            SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("name", fullName);
+        values.put("first_name", firstName);
+        values.put("last_name", lastName);
+        values.put("email", email);
+        values.put("password", password);
+        values.put("dob", dob);
+        values.put("neighborhood", neighborhood);
+        values.put("city", city);
+        values.put("country", country);
+        values.put("profile_image", profileImage);
 
-            ContentValues values = new ContentValues();
-            values.put("name", combinedName);
-            values.put("first_name", firstName);
-            values.put("last_name", lastName);
-            values.put("email", normalizedEmail);
-            values.put("password", password);
-            values.put("dob", dob);
-            values.put("neighborhood", neighborhood);
-            values.put("city", city);
-            values.put("country", country);
-            values.put("profile_image", profileImage);
-
-            long result = db.insert("users", null, values);
-
-            return result != -1;
-        } catch (SQLiteConstraintException e) {
-            return false;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
+        long result = db.insert("users", null, values);
+        return result != -1;
     }
 
     public boolean emailExists(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return false;
-        }
 
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor cursor = null;
 
         try {
             cursor = db.rawQuery(
-                    "SELECT id FROM users WHERE LOWER(email)=LOWER(?)",
-                    new String[]{email.trim()}
+                    "SELECT id FROM users WHERE email=?",
+                    new String[]{email}
             );
 
             return cursor.moveToFirst();
@@ -137,54 +103,47 @@ public class UserRepository {
         }
     }
 
-    private User cursorToUser(Cursor cursor) {
-        if (cursor == null) return null;
+    private User mapCursorToUser(Cursor cursor) {
+        User user = new User();
+        user.setId(cursor.getInt(cursor.getColumnIndexOrThrow("id")));
+        user.setName(cursor.getString(cursor.getColumnIndexOrThrow("name")));
+        user.setEmail(cursor.getString(cursor.getColumnIndexOrThrow("email")));
 
-        String profileImg = null;
-        int profileImgColIndex = cursor.getColumnIndex("profile_image");
-        if (profileImgColIndex != -1) {
-            profileImg = cursor.getString(profileImgColIndex);
-        }
+        int colIdx = cursor.getColumnIndex("first_name");
+        if (colIdx != -1) user.setFirstName(cursor.getString(colIdx));
 
-        User user = new User(
-                cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-                cursor.getString(cursor.getColumnIndexOrThrow("name")),
-                cursor.getString(cursor.getColumnIndexOrThrow("email")),
-                profileImg
-        );
+        colIdx = cursor.getColumnIndex("last_name");
+        if (colIdx != -1) user.setLastName(cursor.getString(colIdx));
 
-        int fnIdx = cursor.getColumnIndex("first_name");
-        if (fnIdx != -1) user.setFirstName(cursor.getString(fnIdx));
+        colIdx = cursor.getColumnIndex("phone");
+        if (colIdx != -1) user.setPhone(cursor.getString(colIdx));
 
-        int lnIdx = cursor.getColumnIndex("last_name");
-        if (lnIdx != -1) user.setLastName(cursor.getString(lnIdx));
+        colIdx = cursor.getColumnIndex("password");
+        if (colIdx != -1) user.setPassword(cursor.getString(colIdx));
 
-        int dobIdx = cursor.getColumnIndex("dob");
-        if (dobIdx != -1) user.setDob(cursor.getString(dobIdx));
+        colIdx = cursor.getColumnIndex("profile_image");
+        if (colIdx != -1) user.setProfileImage(cursor.getString(colIdx));
 
-        int neighIdx = cursor.getColumnIndex("neighborhood");
-        if (neighIdx != -1) user.setNeighborhood(cursor.getString(neighIdx));
+        colIdx = cursor.getColumnIndex("dob");
+        if (colIdx != -1) user.setDob(cursor.getString(colIdx));
 
-        int cityIdx = cursor.getColumnIndex("city");
-        if (cityIdx != -1) user.setCity(cursor.getString(cityIdx));
+        colIdx = cursor.getColumnIndex("neighborhood");
+        if (colIdx != -1) user.setNeighborhood(cursor.getString(colIdx));
 
-        int countryIdx = cursor.getColumnIndex("country");
-        if (countryIdx != -1) user.setCountry(cursor.getString(countryIdx));
+        colIdx = cursor.getColumnIndex("city");
+        if (colIdx != -1) user.setCity(cursor.getString(colIdx));
 
-        int passIdx = cursor.getColumnIndex("password");
-        if (passIdx != -1) user.setPassword(cursor.getString(passIdx));
+        colIdx = cursor.getColumnIndex("country");
+        if (colIdx != -1) user.setCountry(cursor.getString(colIdx));
 
-        int phoneIdx = cursor.getColumnIndex("phone");
-        if (phoneIdx != -1) user.setPhone(cursor.getString(phoneIdx));
+        colIdx = cursor.getColumnIndex("hide_email");
+        if (colIdx != -1) user.setHideEmail(cursor.getInt(colIdx) == 1);
 
-        int hideEmailIdx = cursor.getColumnIndex("hide_email");
-        if (hideEmailIdx != -1) user.setHideEmail(cursor.getInt(hideEmailIdx) == 1);
+        colIdx = cursor.getColumnIndex("hide_dob");
+        if (colIdx != -1) user.setHideDob(cursor.getInt(colIdx) == 1);
 
-        int hideDobIdx = cursor.getColumnIndex("hide_dob");
-        if (hideDobIdx != -1) user.setHideDob(cursor.getInt(hideDobIdx) == 1);
-
-        int hideLocIdx = cursor.getColumnIndex("hide_location");
-        if (hideLocIdx != -1) user.setHideLocation(cursor.getInt(hideLocIdx) == 1);
+        colIdx = cursor.getColumnIndex("hide_location");
+        if (colIdx != -1) user.setHideLocation(cursor.getInt(colIdx) == 1);
 
         return user;
     }
@@ -193,22 +152,17 @@ public class UserRepository {
             String email,
             String password) {
 
-        if (email == null || password == null) {
-            return null;
-        }
-
-        String normalizedEmail = email.trim();
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor cursor = null;
 
         try {
             cursor = db.rawQuery(
-                    "SELECT * FROM users WHERE LOWER(email)=LOWER(?) AND password=?",
-                    new String[]{normalizedEmail, password}
+                    "SELECT * FROM users WHERE email=? AND password=?",
+                    new String[]{email, password}
             );
 
             if (cursor.moveToFirst()) {
-                return cursorToUser(cursor);
+                return mapCursorToUser(cursor);
             }
 
             return null;
@@ -221,21 +175,18 @@ public class UserRepository {
     }
 
     public User getUserByEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
 
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor cursor = null;
 
         try {
             cursor = db.rawQuery(
-                    "SELECT * FROM users WHERE LOWER(email)=LOWER(?)",
-                    new String[]{email.trim()}
+                    "SELECT * FROM users WHERE email=?",
+                    new String[]{email}
             );
 
             if (cursor.moveToFirst()) {
-                return cursorToUser(cursor);
+                return mapCursorToUser(cursor);
             }
 
             return null;
@@ -257,7 +208,7 @@ public class UserRepository {
             return existingUser;
         }
 
-        String dummyPassword = PasswordUtils.hashPassword("SOCIAL_LOGIN_" + System.currentTimeMillis());
+        String dummyPassword = "SOCIAL_LOGIN_NOPASS_" + System.currentTimeMillis();
         boolean inserted = insertUser(name, "", email, dummyPassword, profileImage);
         if (inserted) {
             return getUserByEmail(email);
@@ -277,7 +228,7 @@ public class UserRepository {
             );
 
             if (cursor.moveToFirst()) {
-                return cursorToUser(cursor);
+                return mapCursorToUser(cursor);
             }
 
             return null;
@@ -349,57 +300,6 @@ public class UserRepository {
         return rows > 0;
     }
 
-    public boolean updateUserProfile(
-            int userId,
-            String firstName,
-            String lastName,
-            String dob,
-            String neighborhood,
-            String city,
-            String country,
-            String profileImage) {
-
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-        ContentValues values = new ContentValues();
-        values.put("first_name", firstName);
-        values.put("last_name", lastName);
-        values.put("name", ((lastName != null ? lastName : "") + " " + (firstName != null ? firstName : "")).trim());
-        values.put("dob", dob);
-        values.put("neighborhood", neighborhood);
-        values.put("city", city);
-        values.put("country", country);
-        if (profileImage != null) {
-            values.put("profile_image", profileImage);
-        }
-
-        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
-
-        return rows > 0;
-    }
-
-    public boolean updateUserOnlineStatus(int userId, boolean isOnline) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("is_online", isOnline ? 1 : 0);
-        values.put("last_seen", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date()));
-
-        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
-        return rows > 0;
-    }
-
-    public boolean updateUserPrivacy(int userId, boolean hideEmail, boolean hideDob, boolean hideLocation) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-        ContentValues values = new ContentValues();
-        values.put("hide_email", hideEmail ? 1 : 0);
-        values.put("hide_dob", hideDob ? 1 : 0);
-        values.put("hide_location", hideLocation ? 1 : 0);
-
-        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
-        return rows > 0;
-    }
-
     public boolean updateUserName(int userId, String name) {
 
         SQLiteDatabase db = dbHelper.getWritableDatabase();
@@ -412,37 +312,77 @@ public class UserRepository {
         return rows > 0;
     }
 
-    public boolean updateUserEmail(int userId, String newEmail) {
-        if (newEmail == null || newEmail.trim().isEmpty()) {
-            return false;
-        }
-
-        String normalized = newEmail.trim().toLowerCase();
-        if (emailExists(normalized)) {
-            User existing = getUserByEmail(normalized);
-            if (existing != null && existing.getId() != userId) {
-                return false; // Already taken by another user
-            }
-        }
+    public boolean updateUserProfile(
+            int userId,
+            String firstName,
+            String lastName,
+            String dob,
+            String neighborhood,
+            String city,
+            String country,
+            String profileImage) {
 
         SQLiteDatabase db = dbHelper.getWritableDatabase();
+
+        String fullName = ((lastName != null ? lastName : "") + " " + (firstName != null ? firstName : "")).trim();
+
         ContentValues values = new ContentValues();
-        values.put("email", normalized);
+        if (!fullName.isEmpty()) values.put("name", fullName);
+        values.put("first_name", firstName);
+        values.put("last_name", lastName);
+        values.put("dob", dob);
+        values.put("neighborhood", neighborhood);
+        values.put("city", city);
+        values.put("country", country);
+        if (profileImage != null) {
+            values.put("profile_image", profileImage);
+        }
 
         int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
         return rows > 0;
     }
 
     public boolean updateUserPassword(int userId, String newHashedPassword) {
-        if (newHashedPassword == null || newHashedPassword.isEmpty()) {
-            return false;
-        }
-
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("password", newHashedPassword);
 
         int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
+    public boolean updateUserOnlineStatus(int userId, boolean isOnline) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("is_online", isOnline ? 1 : 0);
+
+        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
+    public boolean updateUserPrivacy(int userId, boolean hideEmail, boolean hideDob, boolean hideLocation) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("hide_email", hideEmail ? 1 : 0);
+        values.put("hide_dob", hideDob ? 1 : 0);
+        values.put("hide_location", hideLocation ? 1 : 0);
+
+        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
+    public boolean updateUserEmail(int userId, String newEmail) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("email", newEmail);
+
+        int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
+        return rows > 0;
+    }
+
+    public boolean deleteUser(int userId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        int rows = db.delete("users", "id=?", new String[]{String.valueOf(userId)});
         return rows > 0;
     }
 
@@ -482,11 +422,5 @@ public class UserRepository {
         }
 
         return users;
-    }
-
-    public boolean deleteUser(int userId) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        int rows = db.delete("users", "id=?", new String[]{String.valueOf(userId)});
-        return rows > 0;
     }
 }

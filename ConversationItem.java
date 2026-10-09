@@ -1,9 +1,5 @@
 package td.teladoumbaobabtd;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-
 public class ConversationItem {
 
     private int conversationId;
@@ -11,20 +7,15 @@ public class ConversationItem {
     private String lastMessage;
     private String profileImage;
     private int unreadCount;
-    private boolean isOnline;
-    private String lastSeen;
+    private boolean isPrivate;
+    private boolean isPinned;
 
     public ConversationItem(int conversationId,
                             String userName,
                             String lastMessage,
                             String profileImage,
                             int unreadCount) {
-
-        this.conversationId = conversationId;
-        this.userName = userName;
-        this.lastMessage = lastMessage;
-        this.profileImage = profileImage;
-        this.unreadCount = unreadCount;
+        this(conversationId, userName, lastMessage, profileImage, unreadCount, false, false);
     }
 
     public ConversationItem(int conversationId,
@@ -32,16 +23,15 @@ public class ConversationItem {
                             String lastMessage,
                             String profileImage,
                             int unreadCount,
-                            boolean isOnline,
-                            String lastSeen) {
-
+                            boolean isPrivate,
+                            boolean isPinned) {
         this.conversationId = conversationId;
         this.userName = userName;
         this.lastMessage = lastMessage;
         this.profileImage = profileImage;
         this.unreadCount = unreadCount;
-        this.isOnline = isOnline;
-        this.lastSeen = lastSeen;
+        this.isPrivate = isPrivate;
+        this.isPinned = isPinned;
     }
 
     public int getConversationId() {
@@ -64,42 +54,19 @@ public class ConversationItem {
         return unreadCount;
     }
 
-    public boolean isOnline() {
-        return isOnline;
+    public boolean isPrivate() {
+        return isPrivate;
     }
 
-    public String getLastSeen() {
-        return lastSeen;
+    public void setPrivate(boolean aPrivate) {
+        isPrivate = aPrivate;
     }
 
-    public String getPresenceStatus() {
-        if (isOnline) {
-            return "En ligne 🟢";
-        }
-        if (lastSeen == null || lastSeen.trim().isEmpty()) {
-            return "Hors ligne";
-        }
+    public boolean isPinned() {
+        return isPinned;
+    }
 
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-            Date date = sdf.parse(lastSeen);
-            if (date == null) return "Hors ligne";
-
-            long diffMillis = System.currentTimeMillis() - date.getTime();
-            long diffMins = diffMillis / (1000 * 60);
-
-            if (diffMins < 0) return "En ligne 🟢";
-
-            if (diffMins < 60) {
-                return "En ligne il y a " + Math.max(1, diffMins) + " min";
-            } else if (diffMins <= 120) {
-                long hours = diffMins / 60;
-                return "En ligne il y a " + hours + " h";
-            } else {
-                return "Hors ligne";
-            }
-        } catch (Exception e) {
-            return "Hors ligne";
-        }
+    public void setPinned(boolean pinned) {
+        isPinned = pinned;
     }
 }

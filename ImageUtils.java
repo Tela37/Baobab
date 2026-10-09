@@ -4,12 +4,16 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.view.ScaleGestureDetector;
 import android.widget.ImageView;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 
+/**
+ * Utilitaire pour la gestion des images (chargement, sauvegarde, redimensionnement et pincement/zoom).
+ */
 public class ImageUtils {
 
     public static String saveImageToInternalStorage(Context context, Uri imageUri) {
@@ -40,6 +44,44 @@ public class ImageUtils {
 
             FileOutputStream outputStream = new FileOutputStream(destinationFile);
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream);
+            outputStream.flush();
+            outputStream.close();
+
+            return destinationFile.getAbsolutePath();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static String saveVideoToInternalStorage(Context context, Uri videoUri) {
+        if (context == null || videoUri == null) {
+            return null;
+        }
+
+        try {
+            File dir = new File(context.getFilesDir(), "post_videos");
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            String filename = "video_" + System.currentTimeMillis() + ".mp4";
+            File destinationFile = new File(dir, filename);
+
+            InputStream inputStream = context.getContentResolver().openInputStream(videoUri);
+            if (inputStream == null) {
+                return null;
+            }
+
+            FileOutputStream outputStream = new FileOutputStream(destinationFile);
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+            inputStream.close();
             outputStream.flush();
             outputStream.close();
 
@@ -87,7 +129,7 @@ public class ImageUtils {
             }
         }
 
-        imageView.setImageResource(R.drawable.ic_profile_2);
+        imageView.setImageResource(R.drawable.ic_profile);
     }
 
     public static void loadFullImage(Context context, String imagePath, ImageView imageView) {
@@ -110,6 +152,34 @@ public class ImageUtils {
             }
         }
 
-        imageView.setImageResource(R.drawable.ic_profile_2);
+        imageView.setImageResource(R.drawable.ic_profile);
+    }
+
+    /**
+     * Active le zoom à deux doigts (Pinch-to-Zoom) sur un ImageView.
+     */
+    public static void enablePinchToZoom(ImageView imageView) {
+        if (imageView == null) return;
+
+        ScaleGestureDetector scaleGestureDetector = new ScaleGestureDetector(
+                imageView.getContext(),
+                new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    private float scaleFactor = 1.0f;
+
+                    @Override
+                    public boolean onScale(ScaleGestureDetector detector) {
+                        scaleFactor *= detector.getScaleFactor();
+                        scaleFactor = Math.max(0.8f, Math.min(scaleFactor, 4.0f));
+                        imageView.setScaleX(scaleFactor);
+                        imageView.setScaleY(scaleFactor);
+                        return true;
+                    }
+                }
+        );
+
+        imageView.setOnTouchListener((v, event) -> {
+            scaleGestureDetector.onTouchEvent(event);
+            return true;
+        });
     }
 }

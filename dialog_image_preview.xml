@@ -3,26 +3,33 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#EE000000"
-    android:padding="16dp">
+    android:background="#EE000000">
 
-    <ImageButton
-        android:id="@+id/ibClosePreview"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@android:drawable/ic_menu_close_clear_cancel"
-        android:contentDescription="Fermer"
-        app:tint="#FFFFFF" />
-
+    <!-- Image en arrière-plan (Z-index inférieur) -->
     <ImageView
         android:id="@+id/imgEnlarged"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/ibClosePreview"
         android:adjustViewBounds="true"
+        android:contentDescription="Image agrandie"
         android:scaleType="fitCenter" />
+
+    <!-- Bouton Fermer (X) en premier plan (Z-index supérieur) -->
+    <ImageButton
+        android:id="@+id/ibClosePreview"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="20dp"
+        android:background="@drawable/badge_background"
+        android:backgroundTint="#80000000"
+        android:contentDescription="Fermer"
+        android:elevation="24dp"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:translationZ="24dp"
+        app:tint="#FFFFFF" />
 
 </RelativeLayout>

@@ -19,12 +19,12 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import td.teladoumbaobabtd.repository.FriendRepository;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import es.dmoral.toasty.Toasty;
-import td.teladoumbaobabtd.repository.ConversationRepository;
-import td.teladoumbaobabtd.repository.FriendRepository;
 
 public class AmiActivity extends AppCompatActivity {
 
@@ -35,7 +35,6 @@ public class AmiActivity extends AppCompatActivity {
     private RecyclerView rvFriendsList;
 
     private FriendRepository friendRepository;
-    private ConversationRepository conversationRepository;
     private SessionManager sessionManager;
 
     private PendingRequestsAdapter requestsAdapter;
@@ -58,7 +57,6 @@ public class AmiActivity extends AppCompatActivity {
         }
 
         friendRepository = new FriendRepository(this);
-        conversationRepository = new ConversationRepository(this);
         sessionManager = new SessionManager(this);
         currentUserId = sessionManager.getUserId();
 
@@ -120,12 +118,6 @@ public class AmiActivity extends AppCompatActivity {
         friendsAdapter = new FriendsListAdapter(friendsList, new OnFriendActionListener() {
             @Override
             public void onSendMessage(User friend) {
-                int convId = conversationRepository.createConversationIfNotExists(currentUserId, friend.getId());
-                Intent intent = new Intent(AmiActivity.this, ChatActivity.class);
-                intent.putExtra("conversation_id", convId);
-                intent.putExtra("receiver_name", friend.getName());
-                intent.putExtra("receiver_profile_image", friend.getProfileImage());
-                startActivity(intent);
             }
 
             @Override
@@ -279,7 +271,7 @@ public class AmiActivity extends AppCompatActivity {
 
             holder.btnAccept.setVisibility(View.GONE);
             holder.btnDecline.setVisibility(View.GONE);
-            holder.btnSendMessage.setVisibility(View.VISIBLE);
+            holder.btnSendMessage.setVisibility(View.GONE);
             holder.btnRemoveFriend.setVisibility(View.VISIBLE);
 
             holder.btnSendMessage.setOnClickListener(v -> {

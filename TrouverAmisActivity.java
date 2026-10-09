@@ -18,11 +18,12 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import td.teladoumbaobabtd.repository.FriendRepository;
+
 import java.util.ArrayList;
 import java.util.List;
 
 import es.dmoral.toasty.Toasty;
-import td.teladoumbaobabtd.repository.FriendRepository;
 
 public class TrouverAmisActivity extends AppCompatActivity {
 

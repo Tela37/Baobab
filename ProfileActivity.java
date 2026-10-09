@@ -47,9 +47,40 @@ public class ProfileActivity extends AppCompatActivity {
 
         loadUserData();
 
+        imgProfileAvatar.setOnClickListener(v -> {
+            User user = userRepository.getUserById(currentUserId);
+            if (user != null && user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+                showImagePreviewDialog(user.getProfileImage());
+            }
+        });
+
         btnOpenProfileUpdate.setOnClickListener(v -> {
             startActivity(new Intent(ProfileActivity.this, ProfileUpdateActivity.class));
         });
+    }
+
+    private void showImagePreviewDialog(String imagePath) {
+        if (imagePath == null || imagePath.trim().isEmpty()) return;
+
+        android.view.View dialogView = android.view.LayoutInflater.from(this).inflate(R.layout.dialog_image_preview, null);
+        ImageView imgEnlarged = dialogView.findViewById(R.id.imgEnlarged);
+        android.widget.ImageButton ibClose = dialogView.findViewById(R.id.ibClosePreview);
+
+        ImageUtils.loadFullImage(this, imagePath, imgEnlarged);
+        if (imgEnlarged != null) {
+            ImageUtils.enablePinchToZoom(imgEnlarged);
+        }
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                .setView(dialogView)
+                .create();
+
+        if (ibClose != null) {
+            ibClose.bringToFront();
+            ibClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        dialog.show();
     }
 
     private void initViews() {

@@ -18,6 +18,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Adaptateur RecyclerView pour l'affichage des publications (posts) sur le fil d'actualité.
+ * Gère les photos, vidéos, textes, j'aime, réactions émojis (❤️, 😂, 👍, etc.), commentaires, partages,
+ * l'édition/suppression pour l'auteur, le zoom d'image et la lecture vidéo.
+ */
 public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder> {
 
     private final List<Post> postList;
@@ -33,6 +38,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         void onEditClick(Post post);
         void onDeleteClick(Post post);
         void onImageClick(String imagePath);
+        void onVideoClick(String videoPath);
     }
 
     public PostAdapter(List<Post> postList, int currentUserId, OnPostClickListener listener) {
@@ -56,6 +62,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         holder.tvPostTime.setText(formatTime(post.getCreatedAt()));
 
         ImageUtils.loadProfileImage(holder.itemView.getContext(), post.getAuthorProfileImage(), holder.imgPostAuthorAvatar);
+        holder.imgPostAuthorAvatar.setOnClickListener(v -> {
+            if (listener != null && post.getAuthorProfileImage() != null && !post.getAuthorProfileImage().isEmpty()) {
+                listener.onImageClick(post.getAuthorProfileImage());
+            }
+        });
 
         if (post.getContent() != null && !post.getContent().trim().isEmpty()) {
             holder.tvPostContent.setVisibility(View.VISIBLE);
@@ -64,6 +75,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             holder.tvPostContent.setVisibility(View.GONE);
         }
 
+        // Image du post
         if (post.getImagePath() != null && !post.getImagePath().trim().isEmpty()) {
             holder.imgPostImage.setVisibility(View.VISIBLE);
             ImageUtils.loadFullImage(holder.itemView.getContext(), post.getImagePath(), holder.imgPostImage);
@@ -75,6 +87,29 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         } else {
             holder.imgPostImage.setVisibility(View.GONE);
             holder.imgPostImage.setOnClickListener(null);
+        }
+
+        // Vidéo du post
+        if (post.getVideoPath() != null && !post.getVideoPath().trim().isEmpty()) {
+            if (holder.layoutPostVideo != null) {
+                holder.layoutPostVideo.setVisibility(View.VISIBLE);
+                if (holder.imgPostVideoThumbnail != null) {
+                    ImageUtils.loadFullImage(holder.itemView.getContext(), post.getVideoPath(), holder.imgPostVideoThumbnail);
+                }
+                View.OnClickListener videoClickListener = v -> {
+                    if (listener != null) {
+                        listener.onVideoClick(post.getVideoPath());
+                    }
+                };
+                holder.layoutPostVideo.setOnClickListener(videoClickListener);
+                if (holder.ibPlayPostVideo != null) {
+                    holder.ibPlayPostVideo.setOnClickListener(videoClickListener);
+                }
+            }
+        } else {
+            if (holder.layoutPostVideo != null) {
+                holder.layoutPostVideo.setVisibility(View.GONE);
+            }
         }
 
         String stats = post.getLikesCount() + " j'aime  •  " + post.getCommentsCount() + " commentaires  •  " + post.getSharesCount() + " partages";
@@ -219,6 +254,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         ImageButton ibDeletePost;
         TextView tvPostContent;
         ImageView imgPostImage;
+
+        View layoutPostVideo;
+        ImageView imgPostVideoThumbnail;
+        ImageView ibPlayPostVideo;
+
         Button btnLikePost;
         Button btnCommentPost;
         Button btnSharePost;
@@ -235,6 +275,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             ibDeletePost = itemView.findViewById(R.id.ibDeletePost);
             tvPostContent = itemView.findViewById(R.id.tvPostContent);
             imgPostImage = itemView.findViewById(R.id.imgPostImage);
+
+            layoutPostVideo = itemView.findViewById(R.id.layoutPostVideo);
+            imgPostVideoThumbnail = itemView.findViewById(R.id.imgPostVideoThumbnail);
+            ibPlayPostVideo = itemView.findViewById(R.id.ibPlayPostVideo);
+
             btnLikePost = itemView.findViewById(R.id.btnLikePost);
             btnCommentPost = itemView.findViewById(R.id.btnCommentPost);
             btnSharePost = itemView.findViewById(R.id.btnSharePost);

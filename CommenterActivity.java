@@ -3,7 +3,6 @@ package td.teladoumbaobabtd;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -18,6 +17,9 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import td.teladoumbaobabtd.repository.CommentRepository;
+import td.teladoumbaobabtd.repository.PostRepository;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -25,8 +27,6 @@ import java.util.List;
 import java.util.Locale;
 
 import es.dmoral.toasty.Toasty;
-import td.teladoumbaobabtd.repository.CommentRepository;
-import td.teladoumbaobabtd.repository.PostRepository;
 
 public class CommenterActivity extends AppCompatActivity {
 

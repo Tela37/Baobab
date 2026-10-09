@@ -11,16 +11,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 
+import td.teladoumbaobabtd.repository.UserRepository;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import es.dmoral.toasty.Toasty;
-import td.teladoumbaobabtd.repository.UserRepository;
 
 public class ParametreActivity extends AppCompatActivity {
 
     private SwitchMaterial switchOnlineStatus;
     private SwitchMaterial switchNotifications;
     private SwitchMaterial switchDarkMode;
+    private SwitchMaterial switchAds;
     private SwitchMaterial switchHideEmail;
     private SwitchMaterial switchHideDob;
     private SwitchMaterial switchHideLocation;
@@ -58,6 +59,7 @@ public class ParametreActivity extends AppCompatActivity {
         switchOnlineStatus = findViewById(R.id.switchOnlineStatus);
         switchNotifications = findViewById(R.id.switchNotifications);
         switchDarkMode = findViewById(R.id.switchDarkMode);
+        switchAds = findViewById(R.id.switchAds);
         switchHideEmail = findViewById(R.id.switchHideEmail);
         switchHideDob = findViewById(R.id.switchHideDob);
         switchHideLocation = findViewById(R.id.switchHideLocation);
@@ -74,6 +76,7 @@ public class ParametreActivity extends AppCompatActivity {
         switchOnlineStatus.setOnCheckedChangeListener(null);
         switchNotifications.setOnCheckedChangeListener(null);
         switchDarkMode.setOnCheckedChangeListener(null);
+        if (switchAds != null) switchAds.setOnCheckedChangeListener(null);
         switchHideEmail.setOnCheckedChangeListener(null);
         switchHideDob.setOnCheckedChangeListener(null);
         switchHideLocation.setOnCheckedChangeListener(null);
@@ -81,6 +84,7 @@ public class ParametreActivity extends AppCompatActivity {
         switchOnlineStatus.setChecked(online);
         switchNotifications.setChecked(notifications);
         switchDarkMode.setChecked(darkMode);
+        if (switchAds != null) switchAds.setChecked(sessionManager.isAdsEnabled());
 
         User currentUser = userRepository.getUserById(currentUserId);
         if (currentUser != null) {
@@ -101,6 +105,13 @@ public class ParametreActivity extends AppCompatActivity {
             prefs.edit().putBoolean("notifications_enabled", isChecked).apply();
             Toasty.info(this, isChecked ? "Notifications activées 🔔" : "Notifications désactivées", Toasty.LENGTH_SHORT).show();
         });
+
+        if (switchAds != null) {
+            switchAds.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                sessionManager.setAdsEnabled(isChecked);
+                Toasty.info(this, isChecked ? "Publicités activées 📢" : "Publicités désactivées", Toasty.LENGTH_SHORT).show();
+            });
+        }
 
         switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (!buttonView.isPressed()) return;

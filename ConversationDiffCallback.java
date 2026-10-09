@@ -63,17 +63,8 @@ public class ConversationDiffCallback
                         newItem.getLastMessage()
                 )
                 &&
-                Objects.equals(
-                        oldItem.getProfileImage(),
-                        newItem.getProfileImage()
-                )
-                &&
-                oldItem.getUnreadCount()
+                oldItem.getProfileImage()
                         ==
-                        newItem.getUnreadCount()
-                &&
-                oldItem.isOnline()
-                        ==
-                        newItem.isOnline();
+                        newItem.getProfileImage();
     }
 }

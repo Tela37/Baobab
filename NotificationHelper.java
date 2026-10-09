@@ -40,12 +40,6 @@ public class NotificationHelper {
                                         int conversationId,
                                         String receiverName) {
 
-        android.content.SharedPreferences prefs = context.getSharedPreferences("MessagesSession", Context.MODE_PRIVATE);
-        boolean notificationsEnabled = prefs.getBoolean("notifications_enabled", true);
-        if (!notificationsEnabled) {
-            return;
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {

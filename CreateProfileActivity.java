@@ -14,10 +14,16 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import com.canhub.cropper.CropImageContract;
+import com.canhub.cropper.CropImageContractOptions;
+import com.canhub.cropper.CropImageOptions;
+import com.canhub.cropper.CropImageView;
+
+import td.teladoumbaobabtd.repository.UserRepository;
+
 import java.util.Calendar;
 
 import es.dmoral.toasty.Toasty;
-import td.teladoumbaobabtd.repository.UserRepository;
 
 public class CreateProfileActivity extends AppCompatActivity {
 
@@ -33,13 +39,36 @@ public class CreateProfileActivity extends AppCompatActivity {
     private String userEmail;
     private String userPassword;
 
-    private final ActivityResultLauncher<String> imagePickerLauncher =
-            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
-                if (uri != null) {
-                    selectedImageUri = uri;
-                    imgCreateProfileAvatar.setImageURI(uri);
+    private final ActivityResultLauncher<CropImageContractOptions> imagePickerLauncher =
+            registerForActivityResult(new CropImageContract(), (CropImageView.CropResult result) -> {
+                if (result.isSuccessful()) {
+                    Uri uri = result.getUriContent();
+                    if (uri != null) {
+                        selectedImageUri = uri;
+                        imgCreateProfileAvatar.setImageURI(uri);
+                    }
+                } else if (result.getError() != null) {
+                    Toasty.error(this, "Erreur lors du recadrage", Toasty.LENGTH_SHORT).show();
                 }
             });
+
+    private void launchImageCropper() {
+        CropImageOptions options = new CropImageOptions();
+        options.imageSourceIncludeGallery = true;
+        options.imageSourceIncludeCamera = true;
+        options.guidelines = CropImageView.Guidelines.ON;
+        options.aspectRatioX = 1;
+        options.aspectRatioY = 1;
+        options.fixAspectRatio = true;
+        options.activityTitle = "Recadrer la photo de profil";
+        options.cropMenuCropButtonTitle = "Valider";
+        options.activityMenuIconColor = android.graphics.Color.WHITE;
+        options.toolbarColor = android.graphics.Color.parseColor("#2196F3");
+        options.toolbarTitleColor = android.graphics.Color.WHITE;
+        options.toolbarBackButtonColor = android.graphics.Color.WHITE;
+        options.toolbarTintColor = android.graphics.Color.WHITE;
+        imagePickerLauncher.launch(new CropImageContractOptions(null, options));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +84,7 @@ public class CreateProfileActivity extends AppCompatActivity {
         initViews();
         readIntentData();
 
-        imgCreateProfileAvatar.setOnClickListener(v -> imagePickerLauncher.launch("image/*"));
+        imgCreateProfileAvatar.setOnClickListener(v -> launchImageCropper());
         etDob.setOnClickListener(v -> showDatePicker());
         btnSubmitProfile.setOnClickListener(v -> submitProfile());
     }
@@ -159,7 +188,7 @@ public class CreateProfileActivity extends AppCompatActivity {
             }
 
             Toasty.success(this, "Profil créé avec succès", Toasty.LENGTH_SHORT).show();
-            startActivity(new Intent(CreateProfileActivity.this, MainActivity.class));
+            startActivity(new Intent(CreateProfileActivity.this, AcceuilActivity.class));
             finish();
         } else {
             Toasty.error(this, "Erreur lors de la création du profil", Toasty.LENGTH_SHORT).show();

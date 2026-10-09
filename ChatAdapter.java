@@ -1,5 +1,6 @@
 package td.teladoumbaobabtd;
 
+import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,104 +10,254 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
-public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.MessageViewHolder> {
+/**
+ * Adaptateur RecyclerView pour l'affichage des messages dans le Chat.
+ * Gère les deux types de vues : messages envoyés (droite) et reçus (gauche),
+ * les statuts de lecture (✓/✓✓ bleu), les réponses ciblées (Quote Reply) et les réactions émojis.
+ */
+public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private static final int TYPE_SENT = 1;
-    private static final int TYPE_RECEIVED = 2;
+    private static final int VIEW_TYPE_SENT = 1;
+    private static final int VIEW_TYPE_RECEIVED = 2;
 
-    private final List<MessageModel> messages;
+    private final List<Message> messageList;
     private final int currentUserId;
-    private final OnMessageLongClickListener longClickListener;
+    private OnMessageLongClickListener longClickListener;
+    private OnImageClickListener imageClickListener;
 
     public interface OnMessageLongClickListener {
-        void OnMessageLongClick(MessageModel message);
+        void onMessageLongClick(Message message);
     }
 
-    public ChatAdapter(List<MessageModel> messages, int currentUserId, OnMessageLongClickListener longClickListener) {
-        this.messages = messages;
+    public interface OnImageClickListener {
+        void onImageClick(String imagePath);
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId) {
+        this.messageList = messageList;
         this.currentUserId = currentUserId;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener,
+                       OnImageClickListener imageClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+        this.imageClickListener = imageClickListener;
+    }
+
+    public void setOnMessageLongClickListener(OnMessageLongClickListener longClickListener) {
         this.longClickListener = longClickListener;
     }
 
     @Override
     public int getItemViewType(int position) {
-        MessageModel message = messages.get(position);
+        Message message = messageList.get(position);
         if (message.getSenderId() == currentUserId) {
-            return TYPE_SENT;
-        } else {
-            return TYPE_RECEIVED;
+            return VIEW_TYPE_SENT;
         }
+        return VIEW_TYPE_RECEIVED;
     }
 
     @NonNull
     @Override
-    public MessageViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view;
-        if (viewType == TYPE_SENT) {
-            view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message_sent, parent, false);
+    public RecyclerView.ViewHolder onCreateViewHolder(
+            @NonNull ViewGroup parent,
+            int viewType) {
+
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+
+        if (viewType == VIEW_TYPE_SENT) {
+            View view = inflater.inflate(
+                    R.layout.item_message_sent,
+                    parent,
+                    false
+            );
+            return new SentViewHolder(view);
         } else {
-            view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message_received, parent, false);
+            View view = inflater.inflate(
+                    R.layout.item_message_received,
+                    parent,
+                    false
+            );
+            return new ReceivedViewHolder(view);
         }
-        return new MessageViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull MessageViewHolder holder, int position) {
-        MessageModel message = messages.get(position);
+    public void onBindViewHolder(
+            @NonNull RecyclerView.ViewHolder holder,
+            int position) {
 
-        holder.txtMessage.setText(message.getMessage() != null ? message.getMessage() : "");
+        Message message = messageList.get(position);
+        String time = formatTime(message.getCreatedAt());
 
-        if (holder.txtTime != null) {
-            holder.txtTime.setText(message.getCreatedAt() != null ? message.getCreatedAt() : "");
-        }
+        if (holder instanceof SentViewHolder) {
+            SentViewHolder viewHolder = (SentViewHolder) holder;
 
-        if (holder.tvEdited != null) {
-            holder.tvEdited.setVisibility(message.isEdited() ? View.VISIBLE : View.GONE);
-        }
+            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, message);
+            bindExtraViews(viewHolder.txtReplyQuote, viewHolder.txtReactionBadge, message);
 
-        if (holder.tvStarred != null) {
-            holder.tvStarred.setVisibility(message.isStarred() ? View.VISIBLE : View.GONE);
-        }
+            viewHolder.txtTime.setText(time);
 
-        if (holder.imgMessageImage != null) {
-            if (message.getImagePath() != null && !message.getImagePath().isEmpty()) {
-                holder.imgMessageImage.setVisibility(View.VISIBLE);
-                ImageUtils.loadFullImage(holder.itemView.getContext(), message.getImagePath(), holder.imgMessageImage);
+            // Statut du message envoyé : ✓ (envoyé), ✓✓ gris (distribué), ✓✓ bleu (lu)
+            if (message.isRead()) {
+                viewHolder.txtStatus.setText("✓✓");
+                viewHolder.txtStatus.setTextColor(Color.parseColor("#2196F3"));
+            } else if (message.isDelivered()) {
+                viewHolder.txtStatus.setText("✓✓");
+                viewHolder.txtStatus.setTextColor(Color.LTGRAY);
             } else {
-                holder.imgMessageImage.setVisibility(View.GONE);
+                viewHolder.txtStatus.setText("✓");
+                viewHolder.txtStatus.setTextColor(Color.WHITE);
             }
+
+        } else if (holder instanceof ReceivedViewHolder) {
+            ReceivedViewHolder viewHolder = (ReceivedViewHolder) holder;
+
+            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, message);
+            bindExtraViews(viewHolder.txtReplyQuote, viewHolder.txtReactionBadge, message);
+
+            viewHolder.txtTime.setText(time);
         }
 
         holder.itemView.setOnLongClickListener(v -> {
             if (longClickListener != null) {
-                longClickListener.OnMessageLongClick(message);
+                longClickListener.onMessageLongClick(message);
                 return true;
             }
             return false;
         });
     }
 
-    @Override
-    public int getItemCount() {
-        return messages != null ? messages.size() : 0;
+    private void bindMessageContent(TextView txtMessage, ImageView imgMessageImage, Message message) {
+        if (message.getImagePath() != null && !message.getImagePath().trim().isEmpty()) {
+            imgMessageImage.setVisibility(View.VISIBLE);
+            ImageUtils.loadProfileImage(imgMessageImage.getContext(), message.getImagePath(), imgMessageImage);
+            imgMessageImage.setOnClickListener(v -> {
+                if (imageClickListener != null) {
+                    imageClickListener.onImageClick(message.getImagePath());
+                }
+            });
+        } else {
+            imgMessageImage.setVisibility(View.GONE);
+            imgMessageImage.setOnClickListener(null);
+        }
+
+        if (message.getMessage() != null && !message.getMessage().trim().isEmpty()) {
+            txtMessage.setVisibility(View.VISIBLE);
+            txtMessage.setText(message.getMessage());
+        } else {
+            txtMessage.setVisibility(View.GONE);
+        }
     }
 
-    public static class MessageViewHolder extends RecyclerView.ViewHolder {
-        TextView txtMessage;
-        TextView txtTime;
-        TextView tvEdited;
-        TextView tvStarred;
-        ImageView imgMessageImage;
+    private void bindExtraViews(TextView txtReplyQuote, TextView txtReactionBadge, Message message) {
+        if (txtReplyQuote != null) {
+            if (message.getReplyToText() != null && !message.getReplyToText().trim().isEmpty()) {
+                txtReplyQuote.setVisibility(View.VISIBLE);
+                txtReplyQuote.setText("↩ " + message.getReplyToText());
+            } else {
+                txtReplyQuote.setVisibility(View.GONE);
+            }
+        }
 
-        public MessageViewHolder(@NonNull View itemView) {
+        if (txtReactionBadge != null) {
+            if (message.getReaction() != null && !message.getReaction().trim().isEmpty()) {
+                txtReactionBadge.setVisibility(View.VISIBLE);
+                txtReactionBadge.setText(message.getReaction());
+            } else {
+                txtReactionBadge.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    @Override
+    public int getItemCount() {
+        return messageList.size();
+    }
+
+    private String formatTime(String dateTime) {
+        try {
+            if (dateTime == null || dateTime.trim().isEmpty()) {
+                return "--:--";
+            }
+
+            SimpleDateFormat inputFormat = new SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss",
+                    Locale.getDefault()
+            );
+
+            Date date = inputFormat.parse(dateTime);
+            if (date == null) {
+                return "--:--";
+            }
+
+            SimpleDateFormat outputFormat = new SimpleDateFormat(
+                    "HH:mm",
+                    Locale.getDefault()
+            );
+
+            return outputFormat.format(date);
+
+        } catch (Exception e) {
+            return "--:--";
+        }
+    }
+
+    public static class SentViewHolder extends RecyclerView.ViewHolder {
+
+        TextView txtMessage;
+        ImageView imgMessageImage;
+        TextView txtTime;
+        TextView txtStatus;
+        TextView txtReplyQuote;
+        TextView txtReactionBadge;
+
+        public SentViewHolder(@NonNull View itemView) {
             super(itemView);
+
             txtMessage = itemView.findViewById(R.id.txtMessage);
-            txtTime = itemView.findViewById(R.id.txtTime);
-            tvEdited = itemView.findViewById(R.id.tvEdited);
-            tvStarred = itemView.findViewById(R.id.tvStarred);
             imgMessageImage = itemView.findViewById(R.id.imgMessageImage);
+            txtTime = itemView.findViewById(R.id.txtTime);
+            txtStatus = itemView.findViewById(R.id.txtStatus);
+            txtReplyQuote = itemView.findViewById(R.id.txtReplyQuote);
+            txtReactionBadge = itemView.findViewById(R.id.txtReactionBadge);
+        }
+    }
+
+    public static class ReceivedViewHolder extends RecyclerView.ViewHolder {
+
+        TextView txtMessage;
+        ImageView imgMessageImage;
+        TextView txtTime;
+        TextView txtReplyQuote;
+        TextView txtReactionBadge;
+
+        public ReceivedViewHolder(@NonNull View itemView) {
+            super(itemView);
+
+            txtMessage = itemView.findViewById(R.id.txtMessage);
+            imgMessageImage = itemView.findViewById(R.id.imgMessageImage);
+            txtTime = itemView.findViewById(R.id.txtTime);
+            txtReplyQuote = itemView.findViewById(R.id.txtReplyQuote);
+            txtReactionBadge = itemView.findViewById(R.id.txtReactionBadge);
         }
     }
 }

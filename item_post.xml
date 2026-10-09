@@ -26,7 +26,7 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ic_profile_2"
+                android:src="@drawable/ic_profile"
                 app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
 
             <LinearLayout
@@ -86,15 +86,43 @@
             android:textSize="15sp"
             android:visibility="gone" />
 
-        <!-- Image de la publication -->
+        <!-- Image de la publication agrandie -->
         <ImageView
             android:id="@+id/imgPostImage"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
+            android:layout_height="wrap_content"
+            android:maxHeight="320dp"
             android:layout_marginTop="12dp"
             android:adjustViewBounds="true"
             android:scaleType="centerCrop"
             android:visibility="gone" />
+
+        <!-- Vidéo de la publication -->
+        <FrameLayout
+            android:id="@+id/layoutPostVideo"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="12dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgPostVideoThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop" />
+
+            <ImageView
+                android:id="@+id/ibPlayPostVideo"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_gravity="center"
+                android:background="@drawable/badge_background"
+                android:backgroundTint="#80000000"
+                android:padding="12dp"
+                android:src="@android:drawable/ic_media_play"
+                app:tint="#FFFFFF" />
+
+        </FrameLayout>
 
         <View
             android:layout_width="match_parent"

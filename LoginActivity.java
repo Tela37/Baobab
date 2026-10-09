@@ -14,6 +14,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 
+import td.teladoumbaobabtd.repository.UserRepository;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -32,7 +33,6 @@ import org.json.JSONObject;
 import java.util.Arrays;
 
 import es.dmoral.toasty.Toasty;
-import td.teladoumbaobabtd.repository.UserRepository;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -149,7 +149,7 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         if (sessionManager.isLoggedIn()) {
-            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+            startActivity(new Intent(LoginActivity.this, AcceuilActivity.class));
             finish();
         }
     }
@@ -243,7 +243,8 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void handleGoogleSignInResult(Task<GoogleSignInAccount> completedTask) {
+    private void handleGoogleSignInResult(Task<GoogleSignInAccount> completedTask)
+    {
         try {
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
             if (account != null) {

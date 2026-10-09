@@ -7,7 +7,6 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import es.dmoral.toasty.Toasty;
 import td.teladoumbaobabtd.repository.UserRepository;
 
 public class ProfileUserActivity2 extends AppCompatActivity {
@@ -52,6 +51,38 @@ public class ProfileUserActivity2 extends AppCompatActivity {
 
         initViews();
         loadUserProfile();
+
+        imgProfileUserAvatar.setOnClickListener(v -> {
+            User user = userRepository.getUserById(targetUserId);
+            String imgPath = user != null ? user.getProfileImage() : getIntent().getStringExtra("user_profile_image");
+            if (imgPath != null && !imgPath.isEmpty()) {
+                showImagePreviewDialog(imgPath);
+            }
+        });
+    }
+
+    private void showImagePreviewDialog(String imagePath) {
+        if (imagePath == null || imagePath.trim().isEmpty()) return;
+
+        android.view.View dialogView = android.view.LayoutInflater.from(this).inflate(R.layout.dialog_image_preview, null);
+        ImageView imgEnlarged = dialogView.findViewById(R.id.imgEnlarged);
+        android.widget.ImageButton ibClose = dialogView.findViewById(R.id.ibClosePreview);
+
+        ImageUtils.loadFullImage(this, imagePath, imgEnlarged);
+        if (imgEnlarged != null) {
+            ImageUtils.enablePinchToZoom(imgEnlarged);
+        }
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                .setView(dialogView)
+                .create();
+
+        if (ibClose != null) {
+            ibClose.bringToFront();
+            ibClose.setOnClickListener(v -> dialog.dismiss());
+        }
+
+        dialog.show();
     }
 
     private void initViews() {
