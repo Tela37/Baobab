@@ -2,12 +2,14 @@ package td.teladoumbaobabtd;
 
 import androidx.recyclerview.widget.DiffUtil;
 
-
 import java.util.List;
 import java.util.Objects;
 
-public class ConversationDiffCallback
-        extends DiffUtil.Callback {
+/**
+ * Calculateur de différences (DiffUtil.Callback) pour la liste des conversations.
+ * Permet à RecyclerView de mettre à jour uniquement les éléments modifiés sans rafraîchir toute la liste.
+ */
+public class ConversationDiffCallback extends DiffUtil.Callback {
 
     private final List<ConversationItem> oldList;
     private final List<ConversationItem> newList;

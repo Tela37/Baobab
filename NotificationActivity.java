@@ -57,16 +57,19 @@ public class NotificationActivity extends AppCompatActivity {
         rvNotifications.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new NotificationAdapter(notificationList, notification -> {
-            // Clic sur une notification : Redirection selon le type
+            // Clic sur une notification : Redirection explicite selon le targetType et le type
             notificationRepository.markAllAsRead(sessionManager.getUserId());
+            String targetType = notification.getTargetType();
             String type = notification.getType();
-            if ("POST_LIKE".equals(type) ||
+
+            if ("POST".equalsIgnoreCase(targetType) ||
+                    "POST_LIKE".equals(type) ||
                     "POST_REACTION".equals(type) ||
                     "POST_COMMENT".equals(type)) {
                 Intent intent = new Intent(NotificationActivity.this, CommenterActivity.class);
                 intent.putExtra("post_id", notification.getTargetId());
                 startActivity(intent);
-            } else if ("FRIEND_REQUEST".equals(type) || "FRIEND_ACCEPT".equals(type)) {
+            } else if ("USER".equalsIgnoreCase(targetType) || "FRIEND_REQUEST".equals(type) || "FRIEND_ACCEPT".equals(type)) {
                 Intent intent = new Intent(NotificationActivity.this, AmiActivity.class);
                 startActivity(intent);
             } else {

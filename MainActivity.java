@@ -153,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
     private void openChatActivity(ConversationItem conversation) {
         Intent intent = new Intent(MainActivity.this, ChatActivity.class);
         intent.putExtra("conversation_id", conversation.getConversationId());
+        intent.putExtra("receiver_id", conversation.getOtherUserId());
         intent.putExtra("receiver_name", conversation.getUserName());
         intent.putExtra("receiver_profile_image", conversation.getProfileImage());
         startActivity(intent);
@@ -412,6 +413,7 @@ public class MainActivity extends AppCompatActivity {
 
                     Intent intent = new Intent(MainActivity.this, ChatActivity.class);
                     intent.putExtra("conversation_id", conversationId);
+                    intent.putExtra("receiver_id", selectedUser.getId());
                     intent.putExtra("receiver_name", selectedUser.getName());
                     intent.putExtra("receiver_profile_image", selectedUser.getProfileImage());
                     startActivity(intent);

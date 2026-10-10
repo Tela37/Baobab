@@ -31,24 +31,30 @@ public class ConversationRepository {
 
     public long createConversation(int user1Id, int user2Id) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
+        int u1 = Math.min(user1Id, user2Id);
+        int u2 = Math.max(user1Id, user2Id);
+
         ContentValues values = new ContentValues();
-        values.put("user1_id", user1Id);
-        values.put("user2_id", user2Id);
-        return db.insert("conversations", null, values);
+        values.put("user1_id", u1);
+        values.put("user2_id", u2);
+
+        return db.insertWithOnConflict("conversations", null, values, SQLiteDatabase.CONFLICT_IGNORE);
     }
 
     public int getConversationId(int user1Id, int user2Id) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
         Cursor cursor = null;
+        int u1 = Math.min(user1Id, user2Id);
+        int u2 = Math.max(user1Id, user2Id);
 
         try {
             cursor = db.rawQuery(
                     "SELECT id FROM conversations WHERE (user1_id=? AND user2_id=?) OR (user1_id=? AND user2_id=?)",
                     new String[]{
-                            String.valueOf(user1Id),
-                            String.valueOf(user2Id),
-                            String.valueOf(user2Id),
-                            String.valueOf(user1Id)
+                            String.valueOf(u1),
+                            String.valueOf(u2),
+                            String.valueOf(u2),
+                            String.valueOf(u1)
                     }
             );
 
@@ -71,6 +77,27 @@ public class ConversationRepository {
             return conversationId;
         }
         return (int) createConversation(user1Id, user2Id);
+    }
+
+    public int getOtherUserId(int conversationId, int currentUserId) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery(
+                    "SELECT user1_id, user2_id FROM conversations WHERE id=?",
+                    new String[]{String.valueOf(conversationId)}
+            );
+            if (cursor.moveToFirst()) {
+                int user1Id = cursor.getInt(0);
+                int user2Id = cursor.getInt(1);
+                return (user1Id == currentUserId) ? user2Id : user1Id;
+            }
+            return -1;
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
     }
 
     public List<ConversationItem> getConversations(int currentUserId) {
@@ -104,6 +131,7 @@ public class ConversationRepository {
                 conversations.add(
                         new ConversationItem(
                                 conversationId,
+                                otherUserId,
                                 userRepository.getUserName(otherUserId),
                                 messageRepository.getLastMessage(conversationId),
                                 userRepository.getUserProfileImage(otherUserId),

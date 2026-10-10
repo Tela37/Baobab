@@ -7,16 +7,15 @@ import android.database.sqlite.SQLiteOpenHelper;
 /**
  * Gestionnaire principal de la base de données SQLite locale.
  * Gère la création des tables, la gestion des contraintes de clés étrangères
- * et les migrations dynamiques de schéma.
+ * et les migrations séquentielles explicites (version par version).
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "messagerie.db";
-    private static final int DATABASE_VERSION = 10;
+    private static final int DATABASE_VERSION = 11;
 
     public DatabaseHelper(Context context) {
-        super(context, DATABASE_NAME,
-                null, DATABASE_VERSION);
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     @Override
@@ -35,11 +34,81 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         super.onOpen(db);
         db.setForeignKeyConstraintsEnabled(true);
         createTablesIfNotExist(db);
+        execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN video_path TEXT");
+        execSqlQuietly(db, "ALTER TABLE group_messages ADD COLUMN video_path TEXT");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // 1. S'assurer que les tables fondamentales existent
         createTablesIfNotExist(db);
+
+        // 2. Migrations séquentielles explicites selon la version précédente (oldVersion)
+        if (oldVersion < 2) {
+            execSqlQuietly(db, "ALTER TABLE conversations ADD COLUMN is_private INTEGER DEFAULT 0");
+            execSqlQuietly(db, "ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0");
+        }
+
+        if (oldVersion < 3) {
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN profile_image TEXT");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN first_name TEXT");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN last_name TEXT");
+        }
+
+        if (oldVersion < 4) {
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN dob TEXT");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN neighborhood TEXT");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN city TEXT");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN country TEXT");
+        }
+
+        if (oldVersion < 5) {
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 1");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN last_seen DATETIME");
+            execSqlQuietly(db, "UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE last_seen IS NULL");
+        }
+
+        if (oldVersion < 6) {
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN hide_email INTEGER DEFAULT 0");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN hide_dob INTEGER DEFAULT 0");
+            execSqlQuietly(db, "ALTER TABLE users ADD COLUMN hide_location INTEGER DEFAULT 0");
+        }
+
+        if (oldVersion < 7) {
+            execSqlQuietly(db, "CREATE TABLE IF NOT EXISTS stories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, image_path TEXT, caption TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)");
+            execSqlQuietly(db, "CREATE TABLE IF NOT EXISTS story_reactions (story_id INTEGER NOT NULL, user_id INTEGER NOT NULL, reaction_type TEXT NOT NULL, PRIMARY KEY (story_id, user_id), FOREIGN KEY (story_id) REFERENCES stories(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)");
+        }
+
+        if (oldVersion < 8) {
+            execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN reply_to_message_id INTEGER DEFAULT NULL");
+            execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN reply_to_text TEXT DEFAULT NULL");
+            execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN reaction TEXT DEFAULT NULL");
+        }
+
+        if (oldVersion < 9) {
+            execSqlQuietly(db, "CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, type TEXT NOT NULL, target_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE)");
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, is_read)");
+        }
+
+        if (oldVersion < 10) {
+            execSqlQuietly(db, "ALTER TABLE posts ADD COLUMN video_path TEXT");
+        }
+
+        if (oldVersion < 11) {
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)");
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(is_read)");
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id)");
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at)");
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_messages_conv_read ON messages(conversation_id, is_read)");
+            execSqlQuietly(db, "CREATE INDEX IF NOT EXISTS idx_messages_conv_sender ON messages(conversation_id, sender_id)");
+        }
+    }
+
+    private void execSqlQuietly(SQLiteDatabase db, String sql) {
+        try {
+            db.execSQL(sql);
+        } catch (Exception ignored) {
+        }
     }
 
     private void createTablesIfNotExist(SQLiteDatabase db) {
@@ -72,6 +141,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         "user_id INTEGER NOT NULL," +
                         "content TEXT," +
                         "image_path TEXT," +
+                        "video_path TEXT," +
                         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
                         "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
                         ")"
@@ -146,12 +216,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
 
         db.execSQL(
+                "CREATE TABLE IF NOT EXISTS blocks (" +
+                        "blocker_id INTEGER NOT NULL," +
+                        "blocked_id INTEGER NOT NULL," +
+                        "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (blocker_id, blocked_id)," +
+                        "FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE," +
+                        "FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE" +
+                        ")"
+        );
+
+        db.execSQL(
                 "CREATE TABLE IF NOT EXISTS friend_requests (" +
                         "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                         "sender_id INTEGER NOT NULL," +
                         "receiver_id INTEGER NOT NULL," +
                         "status TEXT DEFAULT 'PENDING'," +
                         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                        "UNIQUE(sender_id, receiver_id)," +
                         "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE," +
                         "FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE" +
                         ")"
@@ -169,6 +251,54 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         );
 
         db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `groups` (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "name TEXT NOT NULL," +
+                        "icon TEXT," +
+                        "creator_id INTEGER NOT NULL," +
+                        "is_locked INTEGER DEFAULT 0," +
+                        "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                        "FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE" +
+                        ")"
+        );
+
+        db.execSQL(
+                "CREATE TABLE IF NOT EXISTS group_members (" +
+                        "group_id INTEGER NOT NULL," +
+                        "user_id INTEGER NOT NULL," +
+                        "role TEXT DEFAULT 'MEMBER'," +
+                        "joined_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                        "PRIMARY KEY (group_id, user_id)," +
+                        "FOREIGN KEY (group_id) REFERENCES `groups`(id) ON DELETE CASCADE," +
+                        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
+                        ")"
+        );
+
+        db.execSQL(
+                "CREATE TABLE IF NOT EXISTS group_messages (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                        "group_id INTEGER NOT NULL," +
+                        "sender_id INTEGER NOT NULL," +
+                        "message TEXT," +
+                        "image_path TEXT," +
+                        "video_path TEXT," +
+                        "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                        "FOREIGN KEY (group_id) REFERENCES `groups`(id) ON DELETE CASCADE," +
+                        "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE" +
+                        ")"
+        );
+
+        db.execSQL(
+                "CREATE TABLE IF NOT EXISTS group_message_likes (" +
+                        "group_message_id INTEGER NOT NULL," +
+                        "user_id INTEGER NOT NULL," +
+                        "PRIMARY KEY (group_message_id, user_id)," +
+                        "FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE," +
+                        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
+                        ")"
+        );
+
+        db.execSQL(
                 "CREATE TABLE IF NOT EXISTS conversations (" +
                         "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                         "user1_id INTEGER NOT NULL," +
@@ -176,6 +306,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         "is_private INTEGER DEFAULT 0," +
                         "is_pinned INTEGER DEFAULT 0," +
                         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+                        "UNIQUE(user1_id, user2_id)," +
                         "FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE," +
                         "FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE" +
                         ")"
@@ -188,8 +319,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         "sender_id INTEGER NOT NULL," +
                         "message TEXT," +
                         "image_path TEXT," +
+                        "video_path TEXT," +
                         "is_read INTEGER DEFAULT 0," +
                         "is_delivered INTEGER DEFAULT 1," +
+                        "is_deleted INTEGER DEFAULT 0," +
                         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
                         "FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE," +
                         "FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE" +
@@ -227,6 +360,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         "recipient_id INTEGER NOT NULL," +
                         "sender_id INTEGER NOT NULL," +
                         "type TEXT NOT NULL," +
+                        "target_type TEXT NOT NULL DEFAULT 'POST'," +
                         "target_id INTEGER NOT NULL," +
                         "message TEXT NOT NULL," +
                         "is_read INTEGER DEFAULT 0," +
@@ -242,103 +376,50 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_friend_requests_recv ON friend_requests(receiver_id, status);");
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_friend_requests_sender_receiver ON friend_requests(sender_id, receiver_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_stories_user ON stories(user_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id, is_read);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_read ON messages(is_read);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_conv_read ON messages(conversation_id, is_read);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_messages_conv_sender ON messages(conversation_id, sender_id);");
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_conversations_user1_user2 ON conversations(user1_id, user2_id);");
 
-        // Migrations dynamiques des nouvelles colonnes
-        try {
-            db.execSQL("ALTER TABLE messages ADD COLUMN reply_to_message_id INTEGER DEFAULT NULL");
-        } catch (Exception ignored) {
-        }
+        // Table des réactions émojis sur les messages (Multi-utilisateurs)
+        db.execSQL(
+                "CREATE TABLE IF NOT EXISTS message_reactions (" +
+                        "message_id INTEGER NOT NULL," +
+                        "user_id INTEGER NOT NULL," +
+                        "reaction_type TEXT NOT NULL," +
+                        "PRIMARY KEY (message_id, user_id)," +
+                        "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE," +
+                        "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE" +
+                        ")"
+        );
 
-        try {
-            db.execSQL("ALTER TABLE messages ADD COLUMN reply_to_text TEXT DEFAULT NULL");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE messages ADD COLUMN reaction TEXT DEFAULT NULL");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE posts ADD COLUMN video_path TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE conversations ADD COLUMN is_private INTEGER DEFAULT 0");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN profile_image TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN first_name TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN last_name TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN dob TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN neighborhood TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN city TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN country TEXT");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 1");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN last_seen DATETIME");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE last_seen IS NULL");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN hide_email INTEGER DEFAULT 0");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN hide_dob INTEGER DEFAULT 0");
-        } catch (Exception ignored) {
-        }
-
-        try {
-            db.execSQL("ALTER TABLE users ADD COLUMN hide_location INTEGER DEFAULT 0");
-        } catch (Exception ignored) {
-        }
+        // Migrations dynamiques de sécurité pour requêtes existantes
+        execSqlQuietly(db, "ALTER TABLE notifications ADD COLUMN target_type TEXT DEFAULT 'POST'");
+        execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN reply_to_message_id INTEGER DEFAULT NULL");
+        execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN reply_to_text TEXT DEFAULT NULL");
+        execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN reaction TEXT DEFAULT NULL");
+        execSqlQuietly(db, "ALTER TABLE messages ADD COLUMN is_deleted INTEGER DEFAULT 0");
+        execSqlQuietly(db, "ALTER TABLE posts ADD COLUMN video_path TEXT");
+        execSqlQuietly(db, "ALTER TABLE conversations ADD COLUMN is_private INTEGER DEFAULT 0");
+        execSqlQuietly(db, "ALTER TABLE conversations ADD COLUMN is_pinned INTEGER DEFAULT 0");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN profile_image TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN first_name TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN last_name TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN dob TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN neighborhood TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN city TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN country TEXT");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 1");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN last_seen DATETIME");
+        execSqlQuietly(db, "UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE last_seen IS NULL");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN hide_email INTEGER DEFAULT 0");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN hide_dob INTEGER DEFAULT 0");
+        execSqlQuietly(db, "ALTER TABLE users ADD COLUMN hide_location INTEGER DEFAULT 0");
     }
 }

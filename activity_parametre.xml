@@ -224,6 +224,14 @@
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_marginTop="8dp" />
 
+            <Button
+                android:id="@+id/btnPrivacyPolicyParam"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Politique de confidentialité 📄"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_marginTop="8dp" />
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"

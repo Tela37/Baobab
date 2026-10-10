@@ -34,6 +34,11 @@ import java.util.Arrays;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité de connexion (Login).
+ * Gère l'authentification locale (Email/Mot de passe), la connexion Google SignIn et Facebook Login,
+ * la connexion automatique avec "Se souvenir de moi" et le déverrouillage par empreinte biométrique.
+ */
 public class LoginActivity extends AppCompatActivity {
 
     private EditText etEmail, etPassword;
@@ -121,6 +126,8 @@ public class LoginActivity extends AppCompatActivity {
             User user = userRepository.getUser(email, hashedPassword);
 
             if (user != null) {
+                // Synchronisation de la session Firebase Auth
+                FirebaseHelper.getInstance().loginUser(email, password, task -> {});
 
                 sessionManager.createSession(
                         user.getId(),

@@ -3,7 +3,7 @@ package td.teladoumbaobabtd;
 /**
  * Modèle représentant un message échangé dans une discussion.
  * Contient le texte, l'image éventuelle, le statut de lecture/livraison,
- * les informations de réponse (Quote Reply) et la réaction émoji.
+ * les informations de réponse (Quote Reply), la réaction émoji et l'état de suppression douce (isDeleted).
  */
 public class Message {
 
@@ -13,10 +13,12 @@ public class Message {
 
     private String message;
     private String imagePath;
+    private String videoPath;
     private String createdAt;
 
     private boolean isRead;
     private boolean isDelivered;
+    private boolean isDeleted;
 
     // Réponse à un message spécifique (Quote Reply)
     private Integer replyToMessageId;
@@ -50,7 +52,8 @@ public class Message {
                    boolean isDelivered,
                    Integer replyToMessageId,
                    String replyToText,
-                   String reaction) {
+                   String reaction,
+                   boolean isDeleted) {
         this.id = id;
         this.conversationId = conversationId;
         this.senderId = senderId;
@@ -62,6 +65,7 @@ public class Message {
         this.replyToMessageId = replyToMessageId;
         this.replyToText = replyToText;
         this.reaction = reaction;
+        this.isDeleted = isDeleted;
     }
 
     public int getId() {
@@ -84,6 +88,10 @@ public class Message {
         return imagePath;
     }
 
+    public String getVideoPath() {
+        return videoPath;
+    }
+
     public String getCreatedAt() {
         return createdAt;
     }
@@ -94,6 +102,10 @@ public class Message {
 
     public boolean isDelivered() {
         return isDelivered;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
     }
 
     public Integer getReplyToMessageId() {
@@ -128,6 +140,10 @@ public class Message {
         this.imagePath = imagePath;
     }
 
+    public void setVideoPath(String videoPath) {
+        this.videoPath = videoPath;
+    }
+
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
@@ -138,6 +154,10 @@ public class Message {
 
     public void setDelivered(boolean delivered) {
         isDelivered = delivered;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
     }
 
     public void setReplyToMessageId(Integer replyToMessageId) {

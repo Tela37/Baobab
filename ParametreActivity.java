@@ -16,6 +16,11 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité des paramètres de l'application.
+ * Permet de gérer le statut en ligne, les notifications, le mode sombre (Dark Mode),
+ * l'activation des publicités, la confidentialité des données et la réinitialisation du mot de passe.
+ */
 public class ParametreActivity extends AppCompatActivity {
 
     private SwitchMaterial switchOnlineStatus;
@@ -27,6 +32,7 @@ public class ParametreActivity extends AppCompatActivity {
     private SwitchMaterial switchHideLocation;
     private Button btnChangeEmailParam;
     private Button btnChangePasswordParam;
+    private Button btnPrivacyPolicyParam;
     private Button btnDeleteAccountParam;
 
     private SharedPreferences prefs;
@@ -65,6 +71,7 @@ public class ParametreActivity extends AppCompatActivity {
         switchHideLocation = findViewById(R.id.switchHideLocation);
         btnChangeEmailParam = findViewById(R.id.btnChangeEmailParam);
         btnChangePasswordParam = findViewById(R.id.btnChangePasswordParam);
+        btnPrivacyPolicyParam = findViewById(R.id.btnPrivacyPolicyParam);
         btnDeleteAccountParam = findViewById(R.id.btnDeleteAccountParam);
     }
 
@@ -130,6 +137,9 @@ public class ParametreActivity extends AppCompatActivity {
 
         btnChangeEmailParam.setOnClickListener(v -> showChangeEmailDialog());
         btnChangePasswordParam.setOnClickListener(v -> showChangePasswordDialog());
+        if (btnPrivacyPolicyParam != null) {
+            btnPrivacyPolicyParam.setOnClickListener(v -> RegisterActivity.showPrivacyPolicyDialog(this));
+        }
         if (btnDeleteAccountParam != null) {
             btnDeleteAccountParam.setOnClickListener(v -> showDeleteAccountConfirmationDialog());
         }

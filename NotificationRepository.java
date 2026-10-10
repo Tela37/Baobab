@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Repository responsable de la gestion des notifications d'interactions (réactions, commentaires).
+ * Repository responsable de la gestion des notifications d'interactions (réactions, commentaires, demandes d'amis).
  * Filtre automatiquement les auto-interactions (pas de notification lorsque l'utilisateur réagit à son propre contenu).
  */
 public class NotificationRepository {
@@ -23,10 +23,14 @@ public class NotificationRepository {
         this.dbHelper = new DatabaseHelper(context);
     }
 
+    public boolean addNotification(int recipientId, int senderId, String type, int targetId, String message) {
+        return addNotification(recipientId, senderId, type, "POST", targetId, message);
+    }
+
     /**
      * Enregistre une nouvelle notification si l'expéditeur n'est pas le destinataire.
      */
-    public boolean addNotification(int recipientId, int senderId, String type, int targetId, String message) {
+    public boolean addNotification(int recipientId, int senderId, String type, String targetType, int targetId, String message) {
         // Règle essentielle : Aucune notification pour sa propre action sur son propre contenu
         if (recipientId == senderId) {
             return false;
@@ -38,6 +42,7 @@ public class NotificationRepository {
         values.put("recipient_id", recipientId);
         values.put("sender_id", senderId);
         values.put("type", type);
+        values.put("target_type", targetType != null ? targetType : "POST");
         values.put("target_id", targetId);
         values.put("message", message);
         values.put("is_read", 0);
@@ -57,7 +62,7 @@ public class NotificationRepository {
         try {
             cursor = db.rawQuery(
                     "SELECT n.id, n.recipient_id, n.sender_id, u.name AS sender_name, u.profile_image AS sender_avatar, " +
-                            "n.type, n.target_id, n.message, n.is_read, n.created_at " +
+                            "n.type, n.target_type, n.target_id, n.message, n.is_read, n.created_at " +
                             "FROM notifications n " +
                             "JOIN users u ON n.sender_id = u.id " +
                             "WHERE n.recipient_id = ? " +
@@ -66,6 +71,12 @@ public class NotificationRepository {
             );
 
             while (cursor.moveToNext()) {
+                String targetType = "POST";
+                int ttCol = cursor.getColumnIndex("target_type");
+                if (ttCol != -1 && !cursor.isNull(ttCol)) {
+                    targetType = cursor.getString(ttCol);
+                }
+
                 AppNotification notification = new AppNotification(
                         cursor.getInt(0),
                         cursor.getInt(1),
@@ -73,10 +84,11 @@ public class NotificationRepository {
                         cursor.getString(3),
                         cursor.getString(4),
                         cursor.getString(5),
-                        cursor.getInt(6),
-                        cursor.getString(7),
-                        cursor.getInt(8) == 1,
-                        cursor.getString(9)
+                        targetType,
+                        cursor.getInt(7),
+                        cursor.getString(8),
+                        cursor.getInt(9) == 1,
+                        cursor.getString(10)
                 );
                 list.add(notification);
             }

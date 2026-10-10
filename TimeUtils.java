@@ -4,6 +4,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
+/**
+ * Utilitaire de formatage et de comparaison d'horodatages.
+ * Permet de vérifier si une date se situe dans une fenêtre temporelle (ex: stories éphémères de 24h).
+ */
 public class TimeUtils {
 
     public static boolean isWithinHours(String dateTimeStr, long hoursLimit) {

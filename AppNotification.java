@@ -1,7 +1,7 @@
 package td.teladoumbaobabtd;
 
 /**
- * Modèle représentant une notification d'interaction (commentaire, réaction sur un post ou une story).
+ * Modèle représentant une notification d'interaction (commentaire, réaction sur un post ou une story, demande d'ami).
  */
 public class AppNotification {
 
@@ -10,8 +10,9 @@ public class AppNotification {
     private int senderId;
     private String senderName;
     private String senderAvatar;
-    private String type; // "POST_LIKE", "POST_REACTION", "POST_COMMENT", "STORY_REACTION"
-    private int targetId; // post_id ou story_id
+    private String type; // "POST_LIKE", "POST_REACTION", "POST_COMMENT", "STORY_REACTION", "FRIEND_REQUEST", "FRIEND_ACCEPT"
+    private String targetType; // "POST", "STORY", "USER", "COMMENT"
+    private int targetId; // post_id, story_id ou user_id
     private String message;
     private boolean isRead;
     private String createdAt;
@@ -19,13 +20,14 @@ public class AppNotification {
     public AppNotification() {
     }
 
-    public AppNotification(int id, int recipientId, int senderId, String senderName, String senderAvatar, String type, int targetId, String message, boolean isRead, String createdAt) {
+    public AppNotification(int id, int recipientId, int senderId, String senderName, String senderAvatar, String type, String targetType, int targetId, String message, boolean isRead, String createdAt) {
         this.id = id;
         this.recipientId = recipientId;
         this.senderId = senderId;
         this.senderName = senderName;
         this.senderAvatar = senderAvatar;
         this.type = type;
+        this.targetType = targetType;
         this.targetId = targetId;
         this.message = message;
         this.isRead = isRead;
@@ -54,6 +56,10 @@ public class AppNotification {
 
     public String getType() {
         return type;
+    }
+
+    public String getTargetType() {
+        return targetType;
     }
 
     public int getTargetId() {
@@ -94,6 +100,10 @@ public class AppNotification {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public void setTargetType(String targetType) {
+        this.targetType = targetType;
     }
 
     public void setTargetId(int targetId) {

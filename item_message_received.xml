@@ -36,6 +36,29 @@
             android:scaleType="centerCrop"
             android:visibility="gone" />
 
+        <FrameLayout
+            android:id="@+id/layoutVideoContainer"
+            android:layout_width="220dp"
+            android:layout_height="180dp"
+            android:layout_marginBottom="6dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/imgVideoThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop" />
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="center"
+                android:background="#80000000"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_media_play" />
+
+        </FrameLayout>
+
         <TextView
             android:id="@+id/txtMessage"
             android:layout_width="wrap_content"

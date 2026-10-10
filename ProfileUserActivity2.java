@@ -9,6 +9,10 @@ import androidx.appcompat.widget.Toolbar;
 
 import td.teladoumbaobabtd.repository.UserRepository;
 
+/**
+ * Activité d'affichage du profil public d'un autre utilisateur.
+ * Respecte les paramètres de confidentialité de l'utilisateur visé (hide_email, hide_dob, hide_location).
+ */
 public class ProfileUserActivity2 extends AppCompatActivity {
 
     private ImageView imgProfileUserAvatar;
@@ -18,6 +22,7 @@ public class ProfileUserActivity2 extends AppCompatActivity {
     private TextView tvProfileUserNeighborhood;
     private TextView tvProfileUserCity;
     private TextView tvProfileUserCountry;
+    private android.widget.Button btnBlockUser;
 
     private UserRepository userRepository;
     private SessionManager sessionManager;
@@ -93,6 +98,11 @@ public class ProfileUserActivity2 extends AppCompatActivity {
         tvProfileUserNeighborhood = findViewById(R.id.tvProfileUserNeighborhood);
         tvProfileUserCity = findViewById(R.id.tvProfileUserCity);
         tvProfileUserCountry = findViewById(R.id.tvProfileUserCountry);
+        btnBlockUser = findViewById(R.id.btnBlockUser);
+
+        if (btnBlockUser != null) {
+            btnBlockUser.setOnClickListener(v -> toggleBlockUser());
+        }
     }
 
     private void loadUserProfile() {
@@ -140,6 +150,52 @@ public class ProfileUserActivity2 extends AppCompatActivity {
             tvProfileUserCity.setText("Ville : " + (user.getCity() != null && !user.getCity().isEmpty() ? user.getCity() : "Non renseignée"));
             tvProfileUserCountry.setText("Pays : " + (user.getCountry() != null && !user.getCountry().isEmpty() ? user.getCountry() : "Non renseigné"));
         }
+
+        updateBlockButtonState();
+    }
+
+    private void updateBlockButtonState() {
+        if (btnBlockUser == null) return;
+        if (targetUserId == currentUserId || targetUserId == -1) {
+            btnBlockUser.setVisibility(android.view.View.GONE);
+            return;
+        }
+
+        btnBlockUser.setVisibility(android.view.View.VISIBLE);
+        boolean isBlocked = userRepository.isUserBlocked(currentUserId, targetUserId);
+        if (isBlocked) {
+            btnBlockUser.setText("Débloquer cet utilisateur 🟢");
+            btnBlockUser.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#388E3C")));
+        } else {
+            btnBlockUser.setText("Bloquer cet utilisateur 🚫");
+            btnBlockUser.setBackgroundTintList(android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#B71C1C")));
+        }
+    }
+
+    private void toggleBlockUser() {
+        if (targetUserId == currentUserId || targetUserId == -1) return;
+
+        boolean isBlocked = userRepository.isUserBlocked(currentUserId, targetUserId);
+        if (isBlocked) {
+            boolean unblocked = userRepository.unblockUser(currentUserId, targetUserId);
+            if (unblocked) {
+                es.dmoral.toasty.Toasty.success(this, "Utilisateur débloqué", es.dmoral.toasty.Toasty.LENGTH_SHORT).show();
+            }
+        } else {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Bloquer l'utilisateur 🚫")
+                    .setMessage("Voulez-vous vraiment bloquer cet utilisateur ? Ses publications n'apparaîtront plus dans votre fil d'actualité.")
+                    .setPositiveButton("Bloquer", (dialog, which) -> {
+                        boolean blocked = userRepository.blockUser(currentUserId, targetUserId);
+                        if (blocked) {
+                            es.dmoral.toasty.Toasty.warning(this, "Utilisateur bloqué", es.dmoral.toasty.Toasty.LENGTH_SHORT).show();
+                            updateBlockButtonState();
+                        }
+                    })
+                    .setNegativeButton("Annuler", null)
+                    .show();
+        }
+        updateBlockButtonState();
     }
 
     @Override

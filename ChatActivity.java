@@ -30,10 +30,15 @@ import com.canhub.cropper.CropImageContractOptions;
 import com.canhub.cropper.CropImageOptions;
 import com.canhub.cropper.CropImageView;
 
-import td.teladoumbaobabtd.repository.MessageRepository;
-
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+
+import td.teladoumbaobabtd.repository.ConversationRepository;
+import td.teladoumbaobabtd.repository.MessageRepository;
+import td.teladoumbaobabtd.repository.UserRepository;
 
 import es.dmoral.toasty.Toasty;
 
@@ -46,8 +51,10 @@ public class ChatActivity extends AppCompatActivity {
 
     private Toolbar toolbar;
     private TextView tvChatName;
+    private TextView tvUserStatus;
     private TextView tvTypingIndicator;
     private ImageView imgChatAvatar;
+    private View viewOnlineIndicator;
 
     private RecyclerView rvMessages;
 
@@ -67,17 +74,23 @@ public class ChatActivity extends AppCompatActivity {
     private static final int MAX_CHARS = 500;
 
     private MessageRepository messageRepository;
+    private UserRepository userRepository;
+    private ConversationRepository conversationRepository;
     private SessionManager sessionManager;
 
     private ChatAdapter adapter;
     private List<Message> messageList;
 
     private int conversationId;
+    private int receiverId = -1;
     private String receiverName;
     private String receiverProfileImage;
 
     private Handler handler;
     private Runnable refreshRunnable;
+    private AlertDialog activeImageDialog;
+    private boolean isFinishingAdShown = false;
+    private com.google.firebase.firestore.ListenerRegistration firestoreListener;
 
     private final ActivityResultLauncher<CropImageContractOptions> imagePickerLauncher =
             registerForActivityResult(new CropImageContract(), (CropImageView.CropResult result) -> {
@@ -88,6 +101,32 @@ public class ChatActivity extends AppCompatActivity {
                     }
                 } else if (result.getError() != null) {
                     Toasty.error(this, "Erreur lors du recadrage", Toasty.LENGTH_SHORT).show();
+                }
+            });
+
+    private final ActivityResultLauncher<String> multipleImagePickerLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.GetMultipleContents(), uris -> {
+                if (uris != null && !uris.isEmpty()) {
+                    int count = Math.min(uris.size(), 10);
+                    if (uris.size() > 10) {
+                        Toasty.info(this, "Seules les 10 premières photos ont été envoyées", Toasty.LENGTH_SHORT).show();
+                    }
+                    for (int i = 0; i < count; i++) {
+                        Uri uri = uris.get(i);
+                        sendImageMessage(uri);
+                    }
+                }
+            });
+
+    private final ActivityResultLauncher<String> videoPickerLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.GetContent(), videoUri -> {
+                if (videoUri != null) {
+                    String savedPath = ImageUtils.saveVideoToInternalStorage(this, videoUri);
+                    if (savedPath != null) {
+                        sendVideoMessage(savedPath);
+                    } else {
+                        Toasty.error(this, "Erreur lors de l'enregistrement de la vidéo", Toasty.LENGTH_SHORT).show();
+                    }
                 }
             });
 
@@ -106,6 +145,47 @@ public class ChatActivity extends AppCompatActivity {
         imagePickerLauncher.launch(new CropImageContractOptions(null, options));
     }
 
+    private void showMediaSelectionOptions() {
+        String[] options = {"📸 Prendre une photo (Recadrage)", "🖼️ Sélectionner plusieurs photos (Jusqu'à 10)", "🎥 Sélectionner et envoyer une vidéo"};
+        new AlertDialog.Builder(this)
+                .setTitle("Joindre un fichier 📎")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        launchImageCropper();
+                    } else if (which == 1) {
+                        multipleImagePickerLauncher.launch("image/*");
+                    } else if (which == 2) {
+                        videoPickerLauncher.launch("video/*");
+                    }
+                })
+                .show();
+    }
+
+    private void sendVideoMessage(String videoPath) {
+        boolean sent = messageRepository.sendVideoMessage(conversationId, sessionManager.getUserId(), videoPath);
+        if (sent) {
+            loadMessages();
+        }
+    }
+
+    private void showVideoPreviewDialog(String videoPath) {
+        if (videoPath == null || videoPath.trim().isEmpty()) return;
+
+        android.widget.VideoView videoView = new android.widget.VideoView(this);
+        videoView.setVideoPath(videoPath);
+        android.widget.MediaController mediaController = new android.widget.MediaController(this);
+        mediaController.setAnchorView(videoView);
+        videoView.setMediaController(mediaController);
+
+        AlertDialog dialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+                .setView(videoView)
+                .create();
+
+        dialog.setOnDismissListener(d -> videoView.stopPlayback());
+        dialog.show();
+        videoView.start();
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -114,6 +194,8 @@ public class ChatActivity extends AppCompatActivity {
         initViews();
 
         messageRepository = new MessageRepository(this);
+        userRepository = new UserRepository(this);
+        conversationRepository = new ConversationRepository(this);
         sessionManager = new SessionManager(this);
 
         setupToolbar();
@@ -127,7 +209,8 @@ public class ChatActivity extends AppCompatActivity {
                 messageList,
                 sessionManager.getUserId(),
                 message -> showMessageOptionsDialog(message),
-                imagePath -> showImagePreviewDialog(imagePath)
+                imagePath -> showImagePreviewDialog(imagePath),
+                videoPath -> showVideoPreviewDialog(videoPath)
         );
 
         rvMessages.setAdapter(adapter);
@@ -135,7 +218,7 @@ public class ChatActivity extends AppCompatActivity {
         loadMessages();
 
         btnSend.setOnClickListener(v -> sendMessage());
-        ibAttachImage.setOnClickListener(v -> launchImageCropper());
+        ibAttachImage.setOnClickListener(v -> showMediaSelectionOptions());
         if (ibCancelReply != null) {
             ibCancelReply.setOnClickListener(v -> cancelQuoteReply());
         }
@@ -146,8 +229,10 @@ public class ChatActivity extends AppCompatActivity {
     private void initViews() {
         toolbar = findViewById(R.id.toolbar);
         tvChatName = findViewById(R.id.tvChatName);
+        tvUserStatus = findViewById(R.id.tvUserStatus);
         tvTypingIndicator = findViewById(R.id.tvTypingIndicator);
         imgChatAvatar = findViewById(R.id.imgChatAvatar);
+        viewOnlineIndicator = findViewById(R.id.viewOnlineIndicator);
 
         rvMessages = findViewById(R.id.rvMessages);
 
@@ -165,6 +250,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private void readIntentData() {
         conversationId = getIntent().getIntExtra("conversation_id", -1);
+        receiverId = getIntent().getIntExtra("receiver_id", -1);
         receiverName = getIntent().getStringExtra("receiver_name");
         receiverProfileImage = getIntent().getStringExtra("receiver_profile_image");
 
@@ -175,6 +261,74 @@ public class ChatActivity extends AppCompatActivity {
         }
 
         ImageUtils.loadProfileImage(this, receiverProfileImage, imgChatAvatar);
+        loadUserPresence();
+    }
+
+    private void loadUserPresence() {
+        if (receiverId == -1 && conversationId != -1) {
+            receiverId = conversationRepository.getOtherUserId(conversationId, sessionManager.getUserId());
+        }
+        if (receiverId == -1) {
+            if (viewOnlineIndicator != null) viewOnlineIndicator.setVisibility(View.GONE);
+            if (tvUserStatus != null) tvUserStatus.setVisibility(View.GONE);
+            return;
+        }
+
+        User user = userRepository.getUserById(receiverId);
+        if (user == null) {
+            if (viewOnlineIndicator != null) viewOnlineIndicator.setVisibility(View.GONE);
+            if (tvUserStatus != null) tvUserStatus.setVisibility(View.GONE);
+            return;
+        }
+
+        if (user.isOnline()) {
+            if (viewOnlineIndicator != null) viewOnlineIndicator.setVisibility(View.VISIBLE);
+            if (tvUserStatus != null) {
+                tvUserStatus.setText("En ligne");
+                tvUserStatus.setVisibility(View.VISIBLE);
+            }
+        } else {
+            if (viewOnlineIndicator != null) viewOnlineIndicator.setVisibility(View.GONE);
+            String formattedTime = formatLastSeenTime(user.getLastSeen());
+            if (formattedTime != null && !formattedTime.isEmpty() && tvUserStatus != null) {
+                tvUserStatus.setText(formattedTime);
+                tvUserStatus.setVisibility(View.VISIBLE);
+            } else if (tvUserStatus != null) {
+                tvUserStatus.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    private String formatLastSeenTime(String lastSeenStr) {
+        if (lastSeenStr == null || lastSeenStr.trim().isEmpty()) {
+            return null;
+        }
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        try {
+            Date date = sdf.parse(lastSeenStr);
+            if (date == null) return null;
+
+            long diffMs = System.currentTimeMillis() - date.getTime();
+            if (diffMs < 0) diffMs = 0;
+
+            long diffMinutes = diffMs / (60 * 1000);
+
+            if (diffMinutes < 1) {
+                return "En ligne il y a un instant";
+            } else if (diffMinutes <= 60) {
+                if (diffMinutes == 60) {
+                    return "En ligne il y a 1h";
+                } else {
+                    return "En ligne il y a " + diffMinutes + " min";
+                }
+            } else {
+                // Limite "En ligne il y a 1h, pas plus"
+                return null;
+            }
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void setupToolbar() {
@@ -342,32 +496,87 @@ public class ChatActivity extends AppCompatActivity {
     private void showImagePreviewDialog(String imagePath) {
         if (imagePath == null || imagePath.trim().isEmpty()) return;
 
+        if (activeImageDialog != null && activeImageDialog.isShowing()) {
+            activeImageDialog.dismiss();
+        }
+
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_image_preview, null);
         ImageView imgEnlarged = dialogView.findViewById(R.id.imgEnlarged);
         ImageButton ibClose = dialogView.findViewById(R.id.ibClosePreview);
 
         ImageUtils.loadFullImage(this, imagePath, imgEnlarged);
 
-        AlertDialog dialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        activeImageDialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
                 .setView(dialogView)
                 .create();
 
         if (ibClose != null) {
-            ibClose.setOnClickListener(v -> dialog.dismiss());
+            ibClose.setOnClickListener(v -> {
+                if (activeImageDialog != null) activeImageDialog.dismiss();
+            });
         }
-        dialogView.setOnClickListener(v -> dialog.dismiss());
-        dialog.show();
+        dialogView.setOnClickListener(v -> {
+            if (activeImageDialog != null) activeImageDialog.dismiss();
+        });
+        activeImageDialog.setOnDismissListener(d -> activeImageDialog = null);
+        activeImageDialog.show();
     }
 
     private void loadMessages() {
-        // Marquer automatiquement les messages reçus comme lus (✓✓ bleu)
-        messageRepository.markMessagesAsRead(conversationId, sessionManager.getUserId());
+        // 1. Ne marquer comme lu en BDD que s'il y a des messages non lus
+        if (messageRepository.getUnreadCount(conversationId, sessionManager.getUserId()) > 0) {
+            messageRepository.markMessagesAsRead(conversationId, sessionManager.getUserId());
+        }
 
+        // 2. Récupérer la liste des messages
         List<Message> newMessages = messageRepository.getMessages(conversationId);
+
+        // 3. Éviter les rafraîchissements d'UI inutiles si rien n'a changé
+        if (isMessageListIdentical(messageList, newMessages)) {
+            return;
+        }
+
+        boolean wasAtBottom = isScrolledToBottom();
+
         messageList.clear();
         messageList.addAll(newMessages);
         adapter.notifyDataSetChanged();
-        scrollToBottom();
+
+        if (wasAtBottom) {
+            scrollToBottom();
+        }
+    }
+
+    private boolean isMessageListIdentical(List<Message> oldList, List<Message> newList) {
+        if (oldList.size() != newList.size()) {
+            return false;
+        }
+        if (oldList.isEmpty()) {
+            return true;
+        }
+
+        Message lastOld = oldList.get(oldList.size() - 1);
+        Message lastNew = newList.get(newList.size() - 1);
+
+        if (lastOld.getId() != lastNew.getId() || lastOld.isRead() != lastNew.isRead()) {
+            return false;
+        }
+
+        String reactOld = lastOld.getReaction() != null ? lastOld.getReaction() : "";
+        String reactNew = lastNew.getReaction() != null ? lastNew.getReaction() : "";
+
+        return reactOld.equals(reactNew);
+    }
+
+    private boolean isScrolledToBottom() {
+        if (rvMessages == null || rvMessages.getAdapter() == null || messageList.isEmpty()) {
+            return true;
+        }
+        LinearLayoutManager layoutManager = (LinearLayoutManager) rvMessages.getLayoutManager();
+        if (layoutManager == null) return true;
+
+        int lastVisibleItem = layoutManager.findLastCompletelyVisibleItemPosition();
+        return lastVisibleItem >= messageList.size() - 2;
     }
 
     private void scrollToBottom() {
@@ -392,6 +601,7 @@ public class ChatActivity extends AppCompatActivity {
             @Override
             public void run() {
                 loadMessages();
+                loadUserPresence();
                 handler.postDelayed(this, 1500);
             }
         };
@@ -403,6 +613,13 @@ public class ChatActivity extends AppCompatActivity {
         if (handler != null) {
             handler.post(refreshRunnable);
         }
+        if (conversationId != -1) {
+            firestoreListener = FirebaseHelper.getInstance().listenToMessages(conversationId, (snapshot, error) -> {
+                if (snapshot != null && !snapshot.isEmpty()) {
+                    loadMessages();
+                }
+            });
+        }
     }
 
     @Override
@@ -410,6 +627,10 @@ public class ChatActivity extends AppCompatActivity {
         super.onPause();
         if (handler != null) {
             handler.removeCallbacks(refreshRunnable);
+        }
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+            firestoreListener = null;
         }
     }
 
@@ -421,6 +642,24 @@ public class ChatActivity extends AppCompatActivity {
 
     @Override
     public void finish() {
+        if (isFinishingAdShown || isFinishing() || isDestroyed()) {
+            super.finish();
+            return;
+        }
+        isFinishingAdShown = true;
+        if (activeImageDialog != null && activeImageDialog.isShowing()) {
+            activeImageDialog.dismiss();
+            activeImageDialog = null;
+        }
         AdMobManager.showInterstitialAd(this, super::finish);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (activeImageDialog != null && activeImageDialog.isShowing()) {
+            activeImageDialog.dismiss();
+            activeImageDialog = null;
+        }
     }
 }

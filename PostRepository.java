@@ -47,18 +47,24 @@ public class PostRepository {
 
         String query = "SELECT p.id, p.user_id, p.content, p.image_path, p.video_path, p.created_at, " +
                 "u.name AS author_name, u.profile_image AS author_profile_image, " +
-                "(SELECT COUNT(*) FROM post_likes WHERE post_id = p.id) AS likes_count, " +
-                "(SELECT COUNT(*) FROM post_likes WHERE post_id = p.id AND user_id = ?) AS is_liked, " +
+                "(SELECT COUNT(DISTINCT user_id) FROM (SELECT user_id FROM post_likes WHERE post_id = p.id UNION SELECT user_id FROM post_reactions WHERE post_id = p.id)) AS likes_count, " +
+                "((SELECT COUNT(*) FROM post_likes WHERE post_id = p.id AND user_id = ?) + (SELECT COUNT(*) FROM post_reactions WHERE post_id = p.id AND user_id = ?)) AS is_liked_count, " +
                 "(SELECT reaction_type FROM post_reactions WHERE post_id = p.id AND user_id = ?) AS user_reaction, " +
                 "(SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count, " +
                 "(SELECT COUNT(*) FROM post_shares WHERE post_id = p.id) AS shares_count " +
                 "FROM posts p " +
                 "JOIN users u ON p.user_id = u.id " +
+                "WHERE p.user_id NOT IN (SELECT blocked_id FROM blocks WHERE blocker_id = ?) " +
                 "ORDER BY p.created_at DESC";
 
         Cursor cursor = null;
         try {
-            cursor = db.rawQuery(query, new String[]{String.valueOf(currentUserId), String.valueOf(currentUserId)});
+            cursor = db.rawQuery(query, new String[]{
+                    String.valueOf(currentUserId),
+                    String.valueOf(currentUserId),
+                    String.valueOf(currentUserId),
+                    String.valueOf(currentUserId)
+            });
             while (cursor.moveToNext()) {
                 Post post = new Post();
                 post.setId(cursor.getInt(cursor.getColumnIndexOrThrow("id")));
@@ -75,7 +81,7 @@ public class PostRepository {
 
                 post.setCreatedAt(cursor.getString(cursor.getColumnIndexOrThrow("created_at")));
                 post.setLikesCount(cursor.getInt(cursor.getColumnIndexOrThrow("likes_count")));
-                post.setLikedByCurrentUser(cursor.getInt(cursor.getColumnIndexOrThrow("is_liked")) > 0);
+                post.setLikedByCurrentUser(cursor.getInt(cursor.getColumnIndexOrThrow("is_liked_count")) > 0);
                 post.setUserReactionType(cursor.getString(cursor.getColumnIndexOrThrow("user_reaction")));
                 post.setCommentsCount(cursor.getInt(cursor.getColumnIndexOrThrow("comments_count")));
                 post.setSharesCount(cursor.getInt(cursor.getColumnIndexOrThrow("shares_count")));
@@ -111,23 +117,31 @@ public class PostRepository {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         Cursor cursor = null;
         try {
-            cursor = db.rawQuery("SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ?",
-                    new String[]{String.valueOf(postId), String.valueOf(userId)});
+            cursor = db.rawQuery("SELECT 1 FROM post_likes WHERE post_id = ? AND user_id = ? UNION SELECT 1 FROM post_reactions WHERE post_id = ? AND user_id = ?",
+                    new String[]{String.valueOf(postId), String.valueOf(userId), String.valueOf(postId), String.valueOf(userId)});
             if (cursor.moveToFirst()) {
                 db.delete("post_likes", "post_id = ? AND user_id = ?",
+                        new String[]{String.valueOf(postId), String.valueOf(userId)});
+                db.delete("post_reactions", "post_id = ? AND user_id = ?",
                         new String[]{String.valueOf(postId), String.valueOf(userId)});
                 return false;
             } else {
                 ContentValues values = new ContentValues();
                 values.put("post_id", postId);
                 values.put("user_id", userId);
-                db.insert("post_likes", null, values);
+                db.insertWithOnConflict("post_likes", null, values, SQLiteDatabase.CONFLICT_REPLACE);
+
+                ContentValues reactValues = new ContentValues();
+                reactValues.put("post_id", postId);
+                reactValues.put("user_id", userId);
+                reactValues.put("reaction_type", "LIKE");
+                db.insertWithOnConflict("post_reactions", null, reactValues, SQLiteDatabase.CONFLICT_REPLACE);
 
                 // Notification pour le propriétaire du post (si ce n'est pas lui-même)
                 int ownerId = getPostOwnerId(postId);
                 if (ownerId != -1 && ownerId != userId) {
                     String senderName = getUserName(userId);
-                    notificationRepository.addNotification(ownerId, userId, "POST_LIKE", postId, senderName + " a aimé votre publication.");
+                    notificationRepository.addNotification(ownerId, userId, "POST_LIKE", "POST", postId, senderName + " a aimé votre publication.");
                 }
 
                 return true;
@@ -143,6 +157,7 @@ public class PostRepository {
         if (reactionType == null) {
             // Suppression de la réaction lors du choix "Retirer ma réaction"
             db.delete("post_reactions", "post_id = ? AND user_id = ?", new String[]{String.valueOf(postId), String.valueOf(userId)});
+            db.delete("post_likes", "post_id = ? AND user_id = ?", new String[]{String.valueOf(postId), String.valueOf(userId)});
             return;
         }
 
@@ -153,11 +168,16 @@ public class PostRepository {
 
         db.insertWithOnConflict("post_reactions", null, values, SQLiteDatabase.CONFLICT_REPLACE);
 
+        ContentValues likeValues = new ContentValues();
+        likeValues.put("post_id", postId);
+        likeValues.put("user_id", userId);
+        db.insertWithOnConflict("post_likes", null, likeValues, SQLiteDatabase.CONFLICT_IGNORE);
+
         // Notification pour le propriétaire du post (si ce n'est pas lui-même)
         int ownerId = getPostOwnerId(postId);
         if (ownerId != -1 && ownerId != userId) {
             String senderName = getUserName(userId);
-            notificationRepository.addNotification(ownerId, userId, "POST_REACTION", postId, senderName + " a réagi " + reactionType + " à votre publication.");
+            notificationRepository.addNotification(ownerId, userId, "POST_REACTION", "POST", postId, senderName + " a réagi " + reactionType + " à votre publication.");
         }
     }
 

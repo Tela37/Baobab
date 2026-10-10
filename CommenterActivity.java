@@ -28,6 +28,10 @@ import java.util.Locale;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité d'affichage et d'ajout de commentaires sur une publication.
+ * Affiche la publication cible, la liste des commentaires et permet de répondre spécifiquement à un commentaire.
+ */
 public class CommenterActivity extends AppCompatActivity {
 
     private ImageView imgPostAuthorAvatar, imgPostImage;

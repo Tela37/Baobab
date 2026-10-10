@@ -25,6 +25,10 @@ import java.util.List;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité de recherche d'amis.
+ * Permet de rechercher des utilisateurs par nom ou email et de leur envoyer une demande d'ami.
+ */
 public class TrouverAmisActivity extends AppCompatActivity {
 
     private EditText etSearchUsersToBefriend;

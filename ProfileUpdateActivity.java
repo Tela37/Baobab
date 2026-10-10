@@ -23,6 +23,10 @@ import java.util.Calendar;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité de mise à jour des informations de profil utilisateur.
+ * Permet d'éditer le nom, prénom, photo de profil, date de naissance, quartier, ville et pays.
+ */
 public class ProfileUpdateActivity extends AppCompatActivity {
 
     private ImageView imgUpdateProfileAvatar;

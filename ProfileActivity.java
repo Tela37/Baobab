@@ -11,6 +11,10 @@ import androidx.appcompat.widget.Toolbar;
 
 import td.teladoumbaobabtd.repository.UserRepository;
 
+/**
+ * Activité d'affichage du profil de l'utilisateur connecté.
+ * Présente la photo de profil, les informations personnelles et permet d'accéder à la modification du profil.
+ */
 public class ProfileActivity extends AppCompatActivity {
 
     private ImageView imgProfileAvatar;

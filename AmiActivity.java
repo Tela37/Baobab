@@ -26,6 +26,11 @@ import java.util.List;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité de gestion des amis.
+ * Affiche la liste des amis actuels, les demandes d'amis en attente
+ * et permet d'accepter ou décliner les demandes d'amis reçues.
+ */
 public class AmiActivity extends AppCompatActivity {
 
     private Button btnOpenTrouverAmis;

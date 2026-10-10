@@ -1,5 +1,10 @@
 package td.teladoumbaobabtd;
 
+/**
+ * Modèle représentant un utilisateur de l'application BaobabTD.
+ * Contient les identifiants, les informations de profil, les paramètres de confidentialité
+ * et le statut de présence en ligne (isOnline, lastSeen).
+ */
 public class User {
 
     private int id;
@@ -18,6 +23,9 @@ public class User {
     private boolean hideEmail;
     private boolean hideDob;
     private boolean hideLocation;
+
+    private boolean isOnline;
+    private String lastSeen;
 
     public User() {
     }
@@ -178,5 +186,21 @@ public class User {
 
     public void setHideLocation(boolean hideLocation) {
         this.hideLocation = hideLocation;
+    }
+
+    public boolean isOnline() {
+        return isOnline;
+    }
+
+    public void setOnline(boolean online) {
+        isOnline = online;
+    }
+
+    public String getLastSeen() {
+        return lastSeen;
+    }
+
+    public void setLastSeen(String lastSeen) {
+        this.lastSeen = lastSeen;
     }
 }

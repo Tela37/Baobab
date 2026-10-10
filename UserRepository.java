@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import td.teladoumbaobabtd.DatabaseHelper;
+import td.teladoumbaobabtd.PasswordUtils;
 import td.teladoumbaobabtd.User;
 
 import java.util.ArrayList;
@@ -145,33 +146,44 @@ public class UserRepository {
         colIdx = cursor.getColumnIndex("hide_location");
         if (colIdx != -1) user.setHideLocation(cursor.getInt(colIdx) == 1);
 
+        colIdx = cursor.getColumnIndex("is_online");
+        if (colIdx != -1) user.setOnline(cursor.getInt(colIdx) == 1);
+
+        colIdx = cursor.getColumnIndex("last_seen");
+        if (colIdx != -1) user.setLastSeen(cursor.getString(colIdx));
+
         return user;
     }
 
-    public User getUser(
-            String email,
-            String password) {
-
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-        Cursor cursor = null;
-
-        try {
-            cursor = db.rawQuery(
-                    "SELECT * FROM users WHERE email=? AND password=?",
-                    new String[]{email, password}
-            );
-
-            if (cursor.moveToFirst()) {
-                return mapCursorToUser(cursor);
-            }
-
+    public User getUser(String email, String rawPasswordOrHash) {
+        User user = getUserByEmail(email);
+        if (user == null || rawPasswordOrHash == null) {
             return null;
-
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
         }
+
+        String storedHash = user.getPassword();
+        if (storedHash == null) {
+            return null;
+        }
+
+        String pbkdf2Hash = PasswordUtils.hashPassword(rawPasswordOrHash);
+        String saltedSha256 = PasswordUtils.hashPasswordSha256(rawPasswordOrHash);
+        String unsaltedSha256 = PasswordUtils.hashPasswordUnsalted(rawPasswordOrHash);
+
+        // 1. Vérification PBKDF2 (Hachage fort standard)
+        if (storedHash.equals(pbkdf2Hash) || storedHash.equals(rawPasswordOrHash)) {
+            return user;
+        }
+
+        // 2. Vérification Rétrocompatible SHA-256 (avec ou sans sel)
+        if (storedHash.equals(saltedSha256) || storedHash.equals(unsaltedSha256)) {
+            // Migration automatique du mot de passe vers le hachage fort PBKDF2
+            updateUserPassword(user.getId(), pbkdf2Hash);
+            user.setPassword(pbkdf2Hash);
+            return user;
+        }
+
+        return null;
     }
 
     public User getUserByEmail(String email) {
@@ -355,6 +367,7 @@ public class UserRepository {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put("is_online", isOnline ? 1 : 0);
+        values.put("last_seen", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date()));
 
         int rows = db.update("users", values, "id=?", new String[]{String.valueOf(userId)});
         return rows > 0;
@@ -384,6 +397,48 @@ public class UserRepository {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         int rows = db.delete("users", "id=?", new String[]{String.valueOf(userId)});
         return rows > 0;
+    }
+
+    public boolean blockUser(int blockerId, int blockedId) {
+        if (blockerId == blockedId) return false;
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put("blocker_id", blockerId);
+        values.put("blocked_id", blockedId);
+        long result = db.insertWithOnConflict("blocks", null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        return result != -1;
+    }
+
+    public boolean unblockUser(int blockerId, int blockedId) {
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        int rows = db.delete("blocks", "blocker_id=? AND blocked_id=?", new String[]{String.valueOf(blockerId), String.valueOf(blockedId)});
+        return rows > 0;
+    }
+
+    public boolean isUserBlocked(int blockerId, int blockedId) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT 1 FROM blocks WHERE blocker_id=? AND blocked_id=?", new String[]{String.valueOf(blockerId), String.valueOf(blockedId)});
+            return cursor.moveToFirst();
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+    }
+
+    public List<Integer> getBlockedUserIds(int blockerId) {
+        List<Integer> blockedIds = new ArrayList<>();
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.rawQuery("SELECT blocked_id FROM blocks WHERE blocker_id=?", new String[]{String.valueOf(blockerId)});
+            while (cursor.moveToNext()) {
+                blockedIds.add(cursor.getInt(0));
+            }
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return blockedIds;
     }
 
     public List<User> getAllUsersExcept(int currentUserId) {

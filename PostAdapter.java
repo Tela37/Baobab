@@ -94,7 +94,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             if (holder.layoutPostVideo != null) {
                 holder.layoutPostVideo.setVisibility(View.VISIBLE);
                 if (holder.imgPostVideoThumbnail != null) {
-                    ImageUtils.loadFullImage(holder.itemView.getContext(), post.getVideoPath(), holder.imgPostVideoThumbnail);
+                    ImageUtils.loadVideoThumbnail(holder.itemView.getContext(), post.getVideoPath(), holder.imgPostVideoThumbnail);
                 }
                 View.OnClickListener videoClickListener = v -> {
                     if (listener != null) {

@@ -3,6 +3,11 @@ package td.teladoumbaobabtd;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+/**
+ * Gestionnaire de session s'appuyant sur SharedPreferences.
+ * Conserve l'état de connexion de l'utilisateur, l'identifiant utilisateur courant,
+ * le code PIN pour les discussions privées et les préférences d'affichage de publicités.
+ */
 public class SessionManager {
 
     private static final String PREF_NAME = "MessagesSession";

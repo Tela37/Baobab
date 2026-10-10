@@ -82,13 +82,14 @@ public class FriendRepository {
         values.put("receiver_id", receiverId);
         values.put("status", "PENDING");
 
-        long id = db.insert("friend_requests", null, values);
+        long id = db.insertWithOnConflict("friend_requests", null, values, SQLiteDatabase.CONFLICT_IGNORE);
         if (id != -1) {
             String senderName = getUserName(senderId);
             notificationRepository.addNotification(
                     receiverId,
                     senderId,
                     "FRIEND_REQUEST",
+                    "USER",
                     receiverId,
                     senderName + " vous a envoyé une demande d'ami."
             );
@@ -119,6 +120,7 @@ public class FriendRepository {
                         senderId,
                         receiverId,
                         "FRIEND_ACCEPT",
+                        "USER",
                         senderId,
                         receiverName + " a accepté votre demande d'ami."
                 );

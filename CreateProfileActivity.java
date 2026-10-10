@@ -25,6 +25,10 @@ import java.util.Calendar;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * Activité de création de profil utilisateur après la première inscription.
+ * Permet de définir le nom, prénom, photo de profil (recadrage), date de naissance et localisation.
+ */
 public class CreateProfileActivity extends AppCompatActivity {
 
     private ImageView imgCreateProfileAvatar;
@@ -148,6 +152,16 @@ public class CreateProfileActivity extends AppCompatActivity {
         String savedImagePath = null;
         if (selectedImageUri != null) {
             savedImagePath = ImageUtils.saveImageToInternalStorage(this, selectedImageUri);
+            // Téléversement cloud arrière-plan vers Firebase Storage
+            FirebaseHelper.getInstance().uploadMedia("profile_images", selectedImageUri, new FirebaseHelper.OnUploadCompleteListener() {
+                @Override
+                public void onSuccess(String downloadUrl) {
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                }
+            });
         }
 
         String pwdToSave = userPassword != null ? userPassword : PasswordUtils.hashPassword("123456");

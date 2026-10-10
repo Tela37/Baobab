@@ -1,5 +1,8 @@
 package td.teladoumbaobabtd;
 
+/**
+ * Modèle représentant une relation de conversation entre deux utilisateurs dans SQLite.
+ */
 public class Conversation {
 
     private int id;

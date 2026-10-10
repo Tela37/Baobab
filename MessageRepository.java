@@ -12,9 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Repository responsable des opérations CRUD sur la table des messages.
- * Gère l'envoi de texte/images, les réponses ciblées (Quote Reply), les réactions émojis,
- * la lecture et le statut des messages.
+ * Repository responsable des opérations CRUD sécurisées sur la table des messages.
+ * Gère l'envoi de texte/images, les réponses ciblées (Quote Reply), les réactions émojis multi-utilisateurs,
+ * la suppression douce (is_deleted = 1), la limitation des requêtes (LIMIT 200) et le traitement des exceptions SQLite.
  */
 public class MessageRepository {
 
@@ -37,7 +37,7 @@ public class MessageRepository {
     }
 
     /**
-     * Envoie un message dans une conversation avec option de réponse ciblée (Quote Reply).
+     * Envoie un message dans une conversation avec option de réponse ciblée (Quote Reply) et gestion des exceptions SQLite.
      */
     public boolean sendMessage(
             int conversationId,
@@ -54,29 +54,58 @@ public class MessageRepository {
             return false;
         }
 
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        try {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-        ContentValues values = new ContentValues();
-        values.put("conversation_id", conversationId);
-        values.put("sender_id", senderId);
-        values.put("message", hasText ? message.trim() : "");
-        values.put("image_path", imagePath);
-        values.put("is_read", 0);
-        values.put("is_delivered", 1);
+            ContentValues values = new ContentValues();
+            values.put("conversation_id", conversationId);
+            values.put("sender_id", senderId);
+            values.put("message", hasText ? message.trim() : "");
+            values.put("image_path", imagePath);
+            values.put("is_read", 0);
+            values.put("is_delivered", 1);
+            values.put("is_deleted", 0);
 
-        if (replyToMessageId != null) {
-            values.put("reply_to_message_id", replyToMessageId);
+            if (replyToMessageId != null) {
+                values.put("reply_to_message_id", replyToMessageId);
+            }
+            if (replyToText != null && !replyToText.trim().isEmpty()) {
+                values.put("reply_to_text", replyToText.trim());
+            }
+
+            long result = db.insert("messages", null, values);
+            return result != -1;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-        if (replyToText != null && !replyToText.trim().isEmpty()) {
-            values.put("reply_to_text", replyToText.trim());
-        }
+    }
 
-        long result = db.insert("messages", null, values);
-        return result != -1;
+    public boolean sendVideoMessage(int conversationId, int senderId, String videoPath) {
+        if (videoPath == null || videoPath.trim().isEmpty()) return false;
+        try {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            ContentValues values = new ContentValues();
+            values.put("conversation_id", conversationId);
+            values.put("sender_id", senderId);
+            values.put("message", "");
+            values.put("video_path", videoPath);
+            values.put("is_read", 0);
+            values.put("is_delivered", 1);
+            values.put("is_deleted", 0);
+
+            long result = db.insert("messages", null, values);
+            return result != -1;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
-     * Récupère l'ensemble des messages d'une conversation par ordre chronologique.
+     * Récupère les 200 derniers messages d'une conversation par ordre chronologique.
+     * Optimisation : Résolution unique des index de colonnes en dehors de la boucle.
      */
     public List<Message> getMessages(int conversationId) {
         List<Message> messages = new ArrayList<>();
@@ -85,52 +114,61 @@ public class MessageRepository {
 
         try {
             cursor = db.rawQuery(
-                    "SELECT * FROM messages WHERE conversation_id=? ORDER BY id ASC",
+                    "SELECT id, conversation_id, sender_id, message, image_path, video_path, created_at, is_read, is_delivered, reply_to_message_id, reply_to_text, reaction, is_deleted " +
+                            "FROM messages WHERE conversation_id=? ORDER BY id ASC LIMIT 200",
                     new String[]{String.valueOf(conversationId)}
             );
 
+            int idCol = cursor.getColumnIndexOrThrow("id");
+            int convIdCol = cursor.getColumnIndexOrThrow("conversation_id");
+            int senderIdCol = cursor.getColumnIndexOrThrow("sender_id");
+            int msgCol = cursor.getColumnIndexOrThrow("message");
+            int imgPathCol = cursor.getColumnIndex("image_path");
+            int videoPathCol = cursor.getColumnIndex("video_path");
+            int createdAtCol = cursor.getColumnIndexOrThrow("created_at");
+            int isReadCol = cursor.getColumnIndexOrThrow("is_read");
+            int isDeliveredCol = cursor.getColumnIndexOrThrow("is_delivered");
+            int replyIdCol = cursor.getColumnIndex("reply_to_message_id");
+            int replyTextCol = cursor.getColumnIndex("reply_to_text");
+            int reactionCol = cursor.getColumnIndex("reaction");
+            int deletedCol = cursor.getColumnIndex("is_deleted");
+
             while (cursor.moveToNext()) {
-                String imgPath = null;
-                int imgPathColIndex = cursor.getColumnIndex("image_path");
-                if (imgPathColIndex != -1) {
-                    imgPath = cursor.getString(imgPathColIndex);
-                }
+                String imgPath = (imgPathCol != -1 && !cursor.isNull(imgPathCol)) ? cursor.getString(imgPathCol) : null;
+                String videoPath = (videoPathCol != -1 && !cursor.isNull(videoPathCol)) ? cursor.getString(videoPathCol) : null;
+                Integer replyId = (replyIdCol != -1 && !cursor.isNull(replyIdCol)) ? cursor.getInt(replyIdCol) : null;
+                String replyText = (replyTextCol != -1 && !cursor.isNull(replyTextCol)) ? cursor.getString(replyTextCol) : null;
+                String reaction = (reactionCol != -1 && !cursor.isNull(reactionCol)) ? cursor.getString(reactionCol) : null;
+                boolean isDeleted = (deletedCol != -1) && (cursor.getInt(deletedCol) == 1);
 
-                Integer replyId = null;
-                int replyIdCol = cursor.getColumnIndex("reply_to_message_id");
-                if (replyIdCol != -1 && !cursor.isNull(replyIdCol)) {
-                    replyId = cursor.getInt(replyIdCol);
-                }
-
-                String replyText = null;
-                int replyTextCol = cursor.getColumnIndex("reply_to_text");
-                if (replyTextCol != -1) {
-                    replyText = cursor.getString(replyTextCol);
-                }
-
-                String reaction = null;
-                int reactionCol = cursor.getColumnIndex("reaction");
-                if (reactionCol != -1) {
-                    reaction = cursor.getString(reactionCol);
+                String msgText = cursor.getString(msgCol);
+                if (isDeleted) {
+                    msgText = "Ce message a été supprimé 🚫";
+                    imgPath = null;
+                    videoPath = null;
                 }
 
                 Message message = new Message(
-                        cursor.getInt(cursor.getColumnIndexOrThrow("id")),
-                        cursor.getInt(cursor.getColumnIndexOrThrow("conversation_id")),
-                        cursor.getInt(cursor.getColumnIndexOrThrow("sender_id")),
-                        cursor.getString(cursor.getColumnIndexOrThrow("message")),
+                        cursor.getInt(idCol),
+                        cursor.getInt(convIdCol),
+                        cursor.getInt(senderIdCol),
+                        msgText,
                         imgPath,
-                        cursor.getString(cursor.getColumnIndexOrThrow("created_at")),
-                        cursor.getInt(cursor.getColumnIndexOrThrow("is_read")) == 1,
-                        cursor.getInt(cursor.getColumnIndexOrThrow("is_delivered")) == 1,
+                        cursor.getString(createdAtCol),
+                        cursor.getInt(isReadCol) == 1,
+                        cursor.getInt(isDeliveredCol) == 1,
                         replyId,
                         replyText,
-                        reaction
+                        reaction,
+                        isDeleted
                 );
+                message.setVideoPath(videoPath);
 
                 messages.add(message);
             }
 
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -141,41 +179,79 @@ public class MessageRepository {
     }
 
     /**
-     * Ajoute ou met à jour la réaction émoji sur un message.
+     * Ajoute ou met à jour la réaction émoji d'un utilisateur sur un message (Multi-utilisateurs).
      */
-    public boolean setMessageReaction(int messageId, String reaction) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put("reaction", reaction);
+    public boolean setMessageReaction(int messageId, int userId, String reaction) {
+        try {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-        int rows = db.update("messages", values, "id=?", new String[]{String.valueOf(messageId)});
-        return rows > 0;
+            if (reaction == null) {
+                db.delete("message_reactions", "message_id=? AND user_id=?", new String[]{String.valueOf(messageId), String.valueOf(userId)});
+            } else {
+                ContentValues rValues = new ContentValues();
+                rValues.put("message_id", messageId);
+                rValues.put("user_id", userId);
+                rValues.put("reaction_type", reaction);
+                db.insertWithOnConflict("message_reactions", null, rValues, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+
+            ContentValues values = new ContentValues();
+            values.put("reaction", reaction);
+            int rows = db.update("messages", values, "id=?", new String[]{String.valueOf(messageId)});
+            return rows > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
+    public boolean setMessageReaction(int messageId, String reaction) {
+        return setMessageReaction(messageId, 0, reaction);
+    }
+
+    /**
+     * Effectue une suppression douce (Soft Delete) du message en conservant l'enregistrement "Ce message a été supprimé".
+     */
     public boolean deleteMessage(int messageId) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-        int rows = db.delete("messages", "id=?", new String[]{String.valueOf(messageId)});
-        return rows > 0;
+        try {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
+            ContentValues values = new ContentValues();
+            values.put("is_deleted", 1);
+            values.put("message", "Ce message a été supprimé 🚫");
+            values.put("image_path", (String) null);
+
+            int rows = db.update("messages", values, "id=?", new String[]{String.valueOf(messageId)});
+            return rows > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
      * Marque tous les messages reçus de la conversation comme lus (✓✓ bleu).
      */
     public void markMessagesAsRead(int conversationId, int currentUserId) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        try {
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-        ContentValues values = new ContentValues();
-        values.put("is_read", 1);
+            ContentValues values = new ContentValues();
+            values.put("is_read", 1);
 
-        db.update(
-                "messages",
-                values,
-                "conversation_id=? AND sender_id!=? AND is_read=0",
-                new String[]{
-                        String.valueOf(conversationId),
-                        String.valueOf(currentUserId)
-                }
-        );
+            db.update(
+                    "messages",
+                    values,
+                    "conversation_id=? AND sender_id!=? AND is_read=0",
+                    new String[]{
+                            String.valueOf(conversationId),
+                            String.valueOf(currentUserId)
+                    }
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public String getLastMessage(int conversationId) {
@@ -184,11 +260,16 @@ public class MessageRepository {
 
         try {
             cursor = db.rawQuery(
-                    "SELECT message, image_path FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 1",
+                    "SELECT message, image_path, is_deleted FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT 1",
                     new String[]{String.valueOf(conversationId)}
             );
 
             if (cursor.moveToFirst()) {
+                int isDeletedCol = cursor.getColumnIndex("is_deleted");
+                if (isDeletedCol != -1 && cursor.getInt(isDeletedCol) == 1) {
+                    return "Ce message a été supprimé 🚫";
+                }
+
                 String text = cursor.getString(0);
                 String imgPath = cursor.getString(1);
 
@@ -199,11 +280,14 @@ public class MessageRepository {
                     return "📷 Photo";
                 }
 
-                return text;
+                return text != null ? text : "";
             }
 
             return "Aucun message";
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Aucun message";
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -217,7 +301,7 @@ public class MessageRepository {
 
         try {
             cursor = db.rawQuery(
-                    "SELECT COUNT(*) FROM messages WHERE conversation_id=? AND sender_id!=? AND is_read=0",
+                    "SELECT COUNT(*) FROM messages WHERE conversation_id=? AND sender_id!=? AND is_read=0 AND is_deleted=0",
                     new String[]{
                             String.valueOf(conversationId),
                             String.valueOf(currentUserId)
@@ -230,6 +314,9 @@ public class MessageRepository {
 
             return 0;
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
         } finally {
             if (cursor != null) {
                 cursor.close();

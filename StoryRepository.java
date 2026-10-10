@@ -132,6 +132,7 @@ public class StoryRepository {
                         ownerId,
                         userId,
                         "STORY_REACTION",
+                        "STORY",
                         storyId,
                         senderName + " a réagi " + reactionType + " à votre story."
                 );

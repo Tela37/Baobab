@@ -90,6 +90,7 @@ public class CommentRepository {
                         ownerId,
                         currentUserId,
                         "POST_COMMENT",
+                        "POST",
                         postId,
                         senderName + " a commenté votre publication : \"" + snippet + "\""
                 );

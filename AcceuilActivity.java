@@ -70,6 +70,12 @@ public class AcceuilActivity extends AppCompatActivity {
     private SessionManager sessionManager;
     private TextView tvNotificationBadge;
 
+    private AlertDialog activeStoryDialog;
+    private AlertDialog activeVideoDialog;
+    private AlertDialog activeImageDialog;
+    private Handler storyTimerHandler;
+    private Runnable storyTimerRunnable;
+
     private PostAdapter postAdapter;
     private StoryAdapter storyAdapter;
     private final List<Post> postList = new ArrayList<>();
@@ -87,7 +93,7 @@ public class AcceuilActivity extends AppCompatActivity {
                     if (layoutVideoPreview != null) {
                         layoutVideoPreview.setVisibility(View.VISIBLE);
                         if (imgVideoPreviewThumbnail != null) {
-                            ImageUtils.loadFullImage(this, uri.toString(), imgVideoPreviewThumbnail);
+                            ImageUtils.loadVideoThumbnail(this, uri.toString(), imgVideoPreviewThumbnail);
                         }
                     }
                 }
@@ -194,13 +200,35 @@ public class AcceuilActivity extends AppCompatActivity {
         AdMobManager.loadBannerAd(this, adBannerContainer);
         AdMobManager.preloadInterstitialAd(this);
 
+        // Interception du bouton "Retour" (Back) pour appliquer le comportement "à la Facebook"
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
+                // 1. Si le menu latéral (Drawer) est ouvert, on le ferme d'abord
                 if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
                     drawerLayout.closeDrawer(GravityCompat.START);
-                } else {
-                    finish();
+                }
+                // 2. Si une boîte de dialogue de story est affichée, on la ferme
+                else if (activeStoryDialog != null && activeStoryDialog.isShowing()) {
+                    activeStoryDialog.dismiss();
+                }
+                // 3. Si un lecteur vidéo est ouvert en plein écran, on le ferme
+                else if (activeVideoDialog != null && activeVideoDialog.isShowing()) {
+                    activeVideoDialog.dismiss();
+                }
+                // 4. Si un aperçu d'image est ouvert, on le ferme
+                else if (activeImageDialog != null && activeImageDialog.isShowing()) {
+                    activeImageDialog.dismiss();
+                }
+                // 5. Si aucun élément intermédiaire n'est ouvert :
+                // On utilise moveTaskToBack(true) au lieu de finish().
+                // Explication pour débutant :
+                // - finish() détruit l'activité et ferme l'application.
+                // - moveTaskToBack(true) masque simplement l'application et la place en arrière-plan
+                //   (exactement comme si l'utilisateur avait appuyé sur le bouton "Accueil" / Home).
+                //   Ainsi, l'application reste active en mémoire et réapparaît instantanément lors de la réouverture.
+                else {
+                    moveTaskToBack(true);
                 }
             }
         });
@@ -318,6 +346,8 @@ public class AcceuilActivity extends AppCompatActivity {
     private void showStoryGroupViewerDialog(UserStoryGroup group) {
         if (group == null || group.getStories().isEmpty()) return;
 
+        dismissActiveDialogs();
+
         final List<Story> stories = group.getStories();
         final int[] currentStoryIndex = {0};
         final int[] storyProgress = {0};
@@ -332,14 +362,21 @@ public class AcceuilActivity extends AppCompatActivity {
         ProgressBar progressStoryTimer = dialogView.findViewById(R.id.progressStoryTimer);
         ImageButton ibClose = dialogView.findViewById(R.id.ibCloseStoryViewer);
 
-        AlertDialog dialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        activeStoryDialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
                 .setView(dialogView)
                 .create();
 
-        Handler storyTimerHandler = new Handler();
-        Runnable storyTimerRunnable = new Runnable() {
+        final boolean[] isStoryPaused = {false};
+
+        storyTimerHandler = new Handler(android.os.Looper.getMainLooper());
+        storyTimerRunnable = new Runnable() {
             @Override
             public void run() {
+                if (isStoryPaused[0]) {
+                    if (storyTimerHandler != null) storyTimerHandler.postDelayed(this, 100);
+                    return;
+                }
+
                 storyProgress[0] += 2;
                 if (progressStoryTimer != null) {
                     progressStoryTimer.setProgress(storyProgress[0]);
@@ -351,13 +388,13 @@ public class AcceuilActivity extends AppCompatActivity {
                         currentStoryIndex[0]++;
                         storyProgress[0] = 0;
                         renderCurrentStory(stories.get(currentStoryIndex[0]), tvAuthorName, tvStoryTime, imgStoryViewerAvatar, imgStoryViewerPhoto, tvCaption, tvCurrentReaction);
-                        storyTimerHandler.postDelayed(this, 100);
+                        if (storyTimerHandler != null) storyTimerHandler.postDelayed(this, 100);
                     } else {
                         // Toutes les stories de cet utilisateur sont finies -> fermer le visualiseur
-                        dialog.dismiss();
+                        if (activeStoryDialog != null) activeStoryDialog.dismiss();
                     }
                 } else {
-                    storyTimerHandler.postDelayed(this, 100);
+                    if (storyTimerHandler != null) storyTimerHandler.postDelayed(this, 100);
                 }
             }
         };
@@ -366,23 +403,43 @@ public class AcceuilActivity extends AppCompatActivity {
         renderCurrentStory(stories.get(0), tvAuthorName, tvStoryTime, imgStoryViewerAvatar, imgStoryViewerPhoto, tvCaption, tvCurrentReaction);
         storyTimerHandler.postDelayed(storyTimerRunnable, 100);
 
-        dialog.setOnDismissListener(d -> storyTimerHandler.removeCallbacks(storyTimerRunnable));
+        activeStoryDialog.setOnDismissListener(d -> {
+            if (storyTimerHandler != null && storyTimerRunnable != null) {
+                storyTimerHandler.removeCallbacks(storyTimerRunnable);
+            }
+            activeStoryDialog = null;
+        });
 
         if (ibClose != null) {
-            ibClose.setOnClickListener(v -> dialog.dismiss());
+            ibClose.setOnClickListener(v -> {
+                if (activeStoryDialog != null) activeStoryDialog.dismiss();
+            });
         }
 
-        // Navigation tactile : Avancer à la story suivante lors d'un clic sur la photo
+        // Navigation tactile & appui sans relâcher pour mettre la story en pause
         if (imgStoryViewerPhoto != null) {
-            imgStoryViewerPhoto.setOnClickListener(v -> {
-                if (currentStoryIndex[0] + 1 < stories.size()) {
-                    currentStoryIndex[0]++;
-                    storyProgress[0] = 0;
-                    if (progressStoryTimer != null) progressStoryTimer.setProgress(0);
-                    renderCurrentStory(stories.get(currentStoryIndex[0]), tvAuthorName, tvStoryTime, imgStoryViewerAvatar, imgStoryViewerPhoto, tvCaption, tvCurrentReaction);
-                } else {
-                    dialog.dismiss();
+            imgStoryViewerPhoto.setOnTouchListener((v, event) -> {
+                int action = event.getAction();
+                if (action == android.view.MotionEvent.ACTION_DOWN) {
+                    isStoryPaused[0] = true; // Pause sur appui maintenu
+                    return true;
+                } else if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) {
+                    long duration = event.getEventTime() - event.getDownTime();
+                    isStoryPaused[0] = false; // Reprise au relâchement
+
+                    if (duration < 250) { // Si c'est un tap court, passer à la story suivante
+                        if (currentStoryIndex[0] + 1 < stories.size()) {
+                            currentStoryIndex[0]++;
+                            storyProgress[0] = 0;
+                            if (progressStoryTimer != null) progressStoryTimer.setProgress(0);
+                            renderCurrentStory(stories.get(currentStoryIndex[0]), tvAuthorName, tvStoryTime, imgStoryViewerAvatar, imgStoryViewerPhoto, tvCaption, tvCurrentReaction);
+                        } else {
+                            if (activeStoryDialog != null) activeStoryDialog.dismiss();
+                        }
+                    }
+                    return true;
                 }
+                return false;
             });
         }
 
@@ -415,7 +472,7 @@ public class AcceuilActivity extends AppCompatActivity {
         if (btnSad != null) btnSad.setOnClickListener(reactionListener);
         if (btnAngry != null) btnAngry.setOnClickListener(reactionListener);
 
-        dialog.show();
+        activeStoryDialog.show();
     }
 
     private void renderCurrentStory(
@@ -430,7 +487,7 @@ public class AcceuilActivity extends AppCompatActivity {
         if (story == null) return;
 
         if (tvAuthorName != null) tvAuthorName.setText(story.getUserName());
-        if (tvStoryTime != null) tvStoryTime.setText(story.getCreatedAt());
+        if (tvStoryTime != null) tvStoryTime.setText(formatStoryExpiration(story.getCreatedAt()));
         ImageUtils.loadProfileImage(this, story.getUserAvatar(), imgStoryViewerAvatar);
         ImageUtils.loadFullImage(this, story.getImagePath(), imgStoryViewerPhoto);
 
@@ -447,6 +504,37 @@ public class AcceuilActivity extends AppCompatActivity {
             tvCurrentReaction.setText("Vous avez réagi : " + currentReaction);
         } else if (tvCurrentReaction != null) {
             tvCurrentReaction.setVisibility(View.GONE);
+        }
+    }
+
+    private String formatStoryExpiration(String createdAt) {
+        if (createdAt == null || createdAt.trim().isEmpty()) return "Expire bientôt ⏳";
+
+        try {
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault());
+            java.util.Date date = sdf.parse(createdAt);
+            if (date == null) return "Expire bientôt ⏳";
+
+            long createdMillis = date.getTime();
+            long now = System.currentTimeMillis();
+            long elapsedMillis = now - createdMillis;
+            long totalMillis24h = 24 * 60 * 60 * 1000L;
+            long remainingMillis = totalMillis24h - elapsedMillis;
+
+            if (remainingMillis <= 0) {
+                return "Expirée ⏳";
+            }
+
+            long remainingHours = remainingMillis / (60 * 60 * 1000L);
+            long remainingMinutes = (remainingMillis % (60 * 60 * 1000L)) / (60 * 1000L);
+
+            if (remainingHours > 0) {
+                return "Expire dans " + remainingHours + "h " + remainingMinutes + "m ⏳";
+            } else {
+                return "Expire dans " + remainingMinutes + " min ⏳";
+            }
+        } catch (Exception e) {
+            return "Expire bientôt ⏳";
         }
     }
 
@@ -474,11 +562,17 @@ public class AcceuilActivity extends AppCompatActivity {
             } else if (id == R.id.nav_friends) {
                 startActivity(new Intent(AcceuilActivity.this, AmiActivity.class));
                 return true;
+            } else if (id == R.id.nav_groups) {
+                startActivity(new Intent(AcceuilActivity.this, GroupListActivity.class));
+                return true;
             } else if (id == R.id.nav_profile) {
                 startActivity(new Intent(AcceuilActivity.this, ProfileActivity.class));
                 return true;
             } else if (id == R.id.nav_settings) {
                 startActivity(new Intent(AcceuilActivity.this, ParametreActivity.class));
+                return true;
+            } else if (id == R.id.nav_ads) {
+                startActivity(new Intent(AcceuilActivity.this, PubliciteActivity.class));
                 return true;
             } else if (id == R.id.nav_logout) {
                 performLogout();
@@ -624,15 +718,25 @@ public class AcceuilActivity extends AppCompatActivity {
 
         if (selectedPostImageUri != null) {
             savedPostImagePath = ImageUtils.saveImageToInternalStorage(this, selectedPostImageUri);
+            FirebaseHelper.getInstance().uploadMedia("post_images", selectedPostImageUri, null);
         }
 
         if (selectedPostVideoUri != null) {
             savedPostVideoPath = ImageUtils.saveVideoToInternalStorage(this, selectedPostVideoUri);
+            FirebaseHelper.getInstance().uploadMedia("post_videos", selectedPostVideoUri, null);
         }
 
         boolean success = postRepository.createPost(sessionManager.getUserId(), content, savedPostImagePath, savedPostVideoPath);
 
         if (success) {
+            Post newPost = new Post();
+            newPost.setUserId(sessionManager.getUserId());
+            newPost.setAuthorName(sessionManager.getName());
+            newPost.setContent(content);
+            newPost.setImagePath(savedPostImagePath);
+            newPost.setVideoPath(savedPostVideoPath);
+            FirebaseHelper.getInstance().syncPostToFirestore(newPost);
+
             Toasty.success(this, "Publication partagée !", Toasty.LENGTH_SHORT).show();
             etPostContent.setText("");
             selectedPostImageUri = null;
@@ -650,6 +754,8 @@ public class AcceuilActivity extends AppCompatActivity {
     private void showVideoPlayerDialog(String videoPath) {
         if (videoPath == null || videoPath.trim().isEmpty()) return;
 
+        dismissActiveDialogs();
+
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_video_player, null);
         android.widget.VideoView videoViewPlayer = dialogView.findViewById(R.id.videoViewPlayer);
         ImageButton ibClose = dialogView.findViewById(R.id.ibCloseVideoPlayer);
@@ -659,7 +765,7 @@ public class AcceuilActivity extends AppCompatActivity {
         videoViewPlayer.setMediaController(mediaController);
         videoViewPlayer.setVideoPath(videoPath);
 
-        AlertDialog dialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        activeVideoDialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
                 .setView(dialogView)
                 .create();
 
@@ -667,12 +773,15 @@ public class AcceuilActivity extends AppCompatActivity {
             ibClose.bringToFront();
             ibClose.setOnClickListener(v -> {
                 videoViewPlayer.stopPlayback();
-                dialog.dismiss();
+                if (activeVideoDialog != null) activeVideoDialog.dismiss();
             });
         }
 
-        dialog.setOnDismissListener(d -> videoViewPlayer.stopPlayback());
-        dialog.show();
+        activeVideoDialog.setOnDismissListener(d -> {
+            videoViewPlayer.stopPlayback();
+            activeVideoDialog = null;
+        });
+        activeVideoDialog.show();
         videoViewPlayer.start();
     }
 
@@ -781,6 +890,8 @@ public class AcceuilActivity extends AppCompatActivity {
     private void showImagePreviewDialog(String imagePath) {
         if (imagePath == null || imagePath.trim().isEmpty()) return;
 
+        dismissActiveDialogs();
+
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_image_preview, null);
         ImageView imgEnlarged = dialogView.findViewById(R.id.imgEnlarged);
         ImageButton ibClose = dialogView.findViewById(R.id.ibClosePreview);
@@ -790,16 +901,19 @@ public class AcceuilActivity extends AppCompatActivity {
             ImageUtils.enablePinchToZoom(imgEnlarged);
         }
 
-        AlertDialog dialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        activeImageDialog = new AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
                 .setView(dialogView)
                 .create();
 
         if (ibClose != null) {
             ibClose.bringToFront();
-            ibClose.setOnClickListener(v -> dialog.dismiss());
+            ibClose.setOnClickListener(v -> {
+                if (activeImageDialog != null) activeImageDialog.dismiss();
+            });
         }
 
-        dialog.show();
+        activeImageDialog.setOnDismissListener(d -> activeImageDialog = null);
+        activeImageDialog.show();
     }
 
     @Override
@@ -892,10 +1006,52 @@ public class AcceuilActivity extends AppCompatActivity {
         updateNotificationBadge();
         loadCurrentUserAvatar();
         android.widget.FrameLayout adBannerContainer = findViewById(R.id.adBannerContainer);
-        AdMobManager.loadBannerAd(this, adBannerContainer);
+        AdMobManager.resumeBannerAd(adBannerContainer);
+        if (adBannerContainer != null && adBannerContainer.getChildCount() == 0) {
+            AdMobManager.loadBannerAd(this, adBannerContainer);
+        }
         updateNavHeaderData();
         if (navigationView != null) {
             navigationView.setCheckedItem(R.id.nav_home);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        android.widget.FrameLayout adBannerContainer = findViewById(R.id.adBannerContainer);
+        AdMobManager.pauseBannerAd(adBannerContainer);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        dismissActiveDialogs();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        dismissActiveDialogs();
+        android.widget.FrameLayout adBannerContainer = findViewById(R.id.adBannerContainer);
+        AdMobManager.destroyBannerAd(adBannerContainer);
+    }
+
+    private void dismissActiveDialogs() {
+        if (storyTimerHandler != null && storyTimerRunnable != null) {
+            storyTimerHandler.removeCallbacks(storyTimerRunnable);
+        }
+        if (activeStoryDialog != null && activeStoryDialog.isShowing()) {
+            activeStoryDialog.dismiss();
+            activeStoryDialog = null;
+        }
+        if (activeVideoDialog != null && activeVideoDialog.isShowing()) {
+            activeVideoDialog.dismiss();
+            activeVideoDialog = null;
+        }
+        if (activeImageDialog != null && activeImageDialog.isShowing()) {
+            activeImageDialog.dismiss();
+            activeImageDialog = null;
         }
     }
 }

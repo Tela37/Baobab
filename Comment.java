@@ -1,5 +1,9 @@
 package td.teladoumbaobabtd;
 
+/**
+ * Modèle représentant un commentaire ou une réponse à un commentaire sur une publication.
+ * Prend en charge la hiérarchie parent-enfant (parentId) pour les réponses ciblées.
+ */
 public class Comment {
 
     private int id;

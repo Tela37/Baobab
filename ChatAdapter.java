@@ -29,6 +29,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final int currentUserId;
     private OnMessageLongClickListener longClickListener;
     private OnImageClickListener imageClickListener;
+    private OnVideoClickListener videoClickListener;
 
     public interface OnMessageLongClickListener {
         void onMessageLongClick(Message message);
@@ -36,6 +37,10 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public interface OnImageClickListener {
         void onImageClick(String imagePath);
+    }
+
+    public interface OnVideoClickListener {
+        void onVideoClick(String videoPath);
     }
 
     public ChatAdapter(List<Message> messageList,
@@ -60,6 +65,18 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.currentUserId = currentUserId;
         this.longClickListener = longClickListener;
         this.imageClickListener = imageClickListener;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener,
+                       OnImageClickListener imageClickListener,
+                       OnVideoClickListener videoClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+        this.imageClickListener = imageClickListener;
+        this.videoClickListener = videoClickListener;
     }
 
     public void setOnMessageLongClickListener(OnMessageLongClickListener longClickListener) {
@@ -111,7 +128,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (holder instanceof SentViewHolder) {
             SentViewHolder viewHolder = (SentViewHolder) holder;
 
-            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, message);
+            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, viewHolder.layoutVideoContainer, viewHolder.imgVideoThumbnail, message);
             bindExtraViews(viewHolder.txtReplyQuote, viewHolder.txtReactionBadge, message);
 
             viewHolder.txtTime.setText(time);
@@ -131,7 +148,7 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         } else if (holder instanceof ReceivedViewHolder) {
             ReceivedViewHolder viewHolder = (ReceivedViewHolder) holder;
 
-            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, message);
+            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, viewHolder.layoutVideoContainer, viewHolder.imgVideoThumbnail, message);
             bindExtraViews(viewHolder.txtReplyQuote, viewHolder.txtReactionBadge, message);
 
             viewHolder.txtTime.setText(time);
@@ -146,7 +163,20 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         });
     }
 
-    private void bindMessageContent(TextView txtMessage, ImageView imgMessageImage, Message message) {
+    private void bindMessageContent(TextView txtMessage, ImageView imgMessageImage, View layoutVideoContainer, ImageView imgVideoThumbnail, Message message) {
+        if (message.isDeleted()) {
+            imgMessageImage.setVisibility(View.GONE);
+            imgMessageImage.setOnClickListener(null);
+            if (layoutVideoContainer != null) layoutVideoContainer.setVisibility(View.GONE);
+            txtMessage.setVisibility(View.VISIBLE);
+            txtMessage.setText("Ce message a été supprimé 🚫");
+            txtMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+            txtMessage.setTextColor(Color.GRAY);
+            return;
+        }
+
+        txtMessage.setTypeface(null, android.graphics.Typeface.NORMAL);
+
         if (message.getImagePath() != null && !message.getImagePath().trim().isEmpty()) {
             imgMessageImage.setVisibility(View.VISIBLE);
             ImageUtils.loadProfileImage(imgMessageImage.getContext(), message.getImagePath(), imgMessageImage);
@@ -160,6 +190,19 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             imgMessageImage.setOnClickListener(null);
         }
 
+        if (message.getVideoPath() != null && !message.getVideoPath().trim().isEmpty() && layoutVideoContainer != null && imgVideoThumbnail != null) {
+            layoutVideoContainer.setVisibility(View.VISIBLE);
+            ImageUtils.loadVideoThumbnail(imgVideoThumbnail.getContext(), message.getVideoPath(), imgVideoThumbnail);
+            layoutVideoContainer.setOnClickListener(v -> {
+                if (videoClickListener != null) {
+                    videoClickListener.onVideoClick(message.getVideoPath());
+                }
+            });
+        } else if (layoutVideoContainer != null) {
+            layoutVideoContainer.setVisibility(View.GONE);
+            layoutVideoContainer.setOnClickListener(null);
+        }
+
         if (message.getMessage() != null && !message.getMessage().trim().isEmpty()) {
             txtMessage.setVisibility(View.VISIBLE);
             txtMessage.setText(message.getMessage());
@@ -169,6 +212,12 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     private void bindExtraViews(TextView txtReplyQuote, TextView txtReactionBadge, Message message) {
+        if (message.isDeleted()) {
+            if (txtReplyQuote != null) txtReplyQuote.setVisibility(View.GONE);
+            if (txtReactionBadge != null) txtReactionBadge.setVisibility(View.GONE);
+            return;
+        }
+
         if (txtReplyQuote != null) {
             if (message.getReplyToText() != null && !message.getReplyToText().trim().isEmpty()) {
                 txtReplyQuote.setVisibility(View.VISIBLE);
@@ -225,6 +274,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         TextView txtMessage;
         ImageView imgMessageImage;
+        View layoutVideoContainer;
+        ImageView imgVideoThumbnail;
         TextView txtTime;
         TextView txtStatus;
         TextView txtReplyQuote;
@@ -235,6 +286,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             txtMessage = itemView.findViewById(R.id.txtMessage);
             imgMessageImage = itemView.findViewById(R.id.imgMessageImage);
+            layoutVideoContainer = itemView.findViewById(R.id.layoutVideoContainer);
+            imgVideoThumbnail = itemView.findViewById(R.id.imgVideoThumbnail);
             txtTime = itemView.findViewById(R.id.txtTime);
             txtStatus = itemView.findViewById(R.id.txtStatus);
             txtReplyQuote = itemView.findViewById(R.id.txtReplyQuote);
@@ -246,6 +299,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         TextView txtMessage;
         ImageView imgMessageImage;
+        View layoutVideoContainer;
+        ImageView imgVideoThumbnail;
         TextView txtTime;
         TextView txtReplyQuote;
         TextView txtReactionBadge;
@@ -255,6 +310,8 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
             txtMessage = itemView.findViewById(R.id.txtMessage);
             imgMessageImage = itemView.findViewById(R.id.imgMessageImage);
+            layoutVideoContainer = itemView.findViewById(R.id.layoutVideoContainer);
+            imgVideoThumbnail = itemView.findViewById(R.id.imgVideoThumbnail);
             txtTime = itemView.findViewById(R.id.txtTime);
             txtReplyQuote = itemView.findViewById(R.id.txtReplyQuote);
             txtReactionBadge = itemView.findViewById(R.id.txtReactionBadge);

@@ -155,6 +155,60 @@ public class ImageUtils {
         imageView.setImageResource(R.drawable.ic_profile);
     }
 
+    public static void loadVideoThumbnail(Context context, String videoPath, ImageView imageView) {
+        if (imageView == null) {
+            return;
+        }
+
+        if (videoPath != null && !videoPath.trim().isEmpty()) {
+            File file = new File(videoPath);
+            if (file.exists()) {
+                try {
+                    Bitmap thumb = android.media.ThumbnailUtils.createVideoThumbnail(
+                            file.getAbsolutePath(),
+                            android.provider.MediaStore.Video.Thumbnails.MINI_KIND
+                    );
+                    if (thumb != null) {
+                        imageView.setImageBitmap(thumb);
+                        return;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
+            android.media.MediaMetadataRetriever retriever = new android.media.MediaMetadataRetriever();
+            try {
+                if (videoPath.startsWith("http://") || videoPath.startsWith("https://")) {
+                    retriever.setDataSource(videoPath, new java.util.HashMap<>());
+                } else if (videoPath.startsWith("content://")) {
+                    retriever.setDataSource(context, Uri.parse(videoPath));
+                } else {
+                    File f = new File(videoPath);
+                    if (f.exists()) {
+                        retriever.setDataSource(f.getAbsolutePath());
+                    }
+                }
+
+                Bitmap frame = retriever.getFrameAtTime();
+                if (frame == null) {
+                    frame = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                }
+                if (frame != null) {
+                    imageView.setImageBitmap(frame);
+                    try { retriever.release(); } catch (Exception ignored) {}
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                try { retriever.release(); } catch (Exception ignored) {}
+            }
+        }
+
+        imageView.setBackgroundColor(android.graphics.Color.parseColor("#333333"));
+        imageView.setImageBitmap(null);
+    }
+
     /**
      * Active le zoom à deux doigts (Pinch-to-Zoom) sur un ImageView.
      */
