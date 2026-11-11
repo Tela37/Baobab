@@ -1,0 +1,476 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white"
+    android:fillViewport="true"
+    tools:layout_editor_absoluteX="1dp"
+    tools:layout_editor_absoluteY="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbarProfile"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#2E7D32"
+            app:titleTextColor="#FFFFFF" />
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imgProfileAvatar"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_profile"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+        <TextView
+            android:id="@+id/tvProfileLastName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:gravity="center"
+            android:hint="@string/hint_full_name"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnOpenProfileUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="10dp"
+            android:layout_marginHorizontal="50dp"
+            android:text="@string/btn_edit_profile" />
+
+        <TextView
+            android:id="@+id/textView_details"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/grey"
+            android:gravity="start"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:text="@string/bref_details"
+            android:textAlignment="viewStart"
+            android:textColor="@color/white"
+            android:textSize="23sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/linearLayoutU"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:orientation="vertical">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:background="@color/grey" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="15dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginEnd="10dp"
+                        android:drawablePadding="1dp"
+                        android:hint="@string/hint_dob_and_gender"
+                        android:textColor="@color/black"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        app:drawableStartCompat="@drawable/calendrier" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="10dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvProfileDob"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="25dp"
+                        android:src="@drawable/person"
+                        android:text="@string/dob_placeholder"
+                        android:textColor="@color/grey"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/genre_profil_act"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="3sp"
+                        android:hint="@string/hint_gender_placeholder"
+                        android:maxLength="8"
+                        android:padding="2dp"
+                        android:textColor="@color/black"
+                        android:textColorHint="@color/grey"
+                        android:textSize="20sp" />
+
+                </LinearLayout>
+            </LinearLayout>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey"
+                app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="20dp"
+                android:hint="@string/hint_profession"
+                android:paddingStart="20dp"
+                android:textAlignment="viewStart"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/profession_profile_act"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="3dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                app:drawableStartCompat="@drawable/bao_work_1" />
+
+            <TableRow
+                android:id="@+id/tableRow22"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey"
+                app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <TextView
+                android:id="@+id/textView4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="15dp"
+                android:hint="@string/hint_bio_or_quote"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/status_profile_act"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="2dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                android:textStyle="italic"
+                app:drawableStartCompat="@drawable/bao_bio" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey"
+                app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <TextView
+                android:id="@+id/situa_am"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="15dp"
+                android:hint="@string/hint_relationship_status"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/matrimonial_Profil_act"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="2dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                android:textStyle="italic"
+                app:drawableStartCompat="@drawable/amour1" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey"
+                app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                tools:layout_editor_absoluteX="0dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="20dp"
+                android:hint="@string/hint_email"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvProfileEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="3dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                app:drawableStartCompat="@drawable/bao_custom_email_input" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey" />
+
+            <TextView
+                android:id="@+id/tel1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="20dp"
+                android:hint="@string/hint_phone"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/telephone_profile_act"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:drawablePadding="3dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                app:drawableLeftCompat="@drawable/bao_phone_1" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="20dp"
+                android:hint="@string/hint_neighborhood"
+                android:paddingStart="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvProfileNeighborhood"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:drawablePadding="3dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                app:drawableLeftCompat="@drawable/ville" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="20dp"
+                android:hint="@string/hint_city"
+                android:paddingStart="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvProfileCity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:drawablePadding="3dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="15sp"
+                app:drawableLeftCompat="@drawable/bao_quartier" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginStart="50dp"
+                android:layout_marginEnd="10dp"
+                android:background="@color/grey" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:drawablePadding="20dp"
+                android:hint="@string/hint_country"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
+                android:textColor="@color/grey"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvProfileCountry"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:layout_marginEnd="10dp"
+                android:clickable="true"
+                android:drawablePadding="3dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="17dp"
+                android:textColor="@color/black"
+                android:textSize="13sp"
+                app:drawableLeftCompat="@drawable/pays1" />
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/grey" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginVertical="5dp">
+
+            <Button
+                android:id="@+id/publicationBtn_profil_act"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/button"
+                android:gravity="center"
+                android:padding="7dp"
+                android:text="@string/btn_posts_count"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/amiBtn_profile_act"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginEnd="5dp"
+                android:layout_weight="1"
+                android:background="@drawable/button"
+                android:gravity="center"
+                android:padding="7dp"
+                android:text="@string/btn_friends_count"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/blocageBtn_profil"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_weight="1"
+                android:background="@drawable/button"
+                android:gravity="center"
+                android:padding="7dp"
+                android:text="@string/btn_blocked_count"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+</ScrollView>

@@ -1,0 +1,390 @@
+package td.teladoum.baobab.adapters;
+
+import td.teladoum.baobab.R;
+
+import td.teladoum.baobab.models.*;
+import td.teladoum.baobab.adapters.*;
+import td.teladoum.baobab.repositories.*;
+import td.teladoum.baobab.services.*;
+import td.teladoum.baobab.firebase.*;
+import td.teladoum.baobab.helpers.*;
+import td.teladoum.baobab.notifications.*;
+import td.teladoum.baobab.utils.*;
+import td.teladoum.baobab.activities.*;
+
+import android.graphics.Color;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Adaptateur RecyclerView pour l'affichage des messages dans le Chat.
+ * Gère les deux types de vues : messages envoyés (droite) et reçus (gauche),
+ * les statuts de lecture (✓/✓✓ bleu), les réponses ciblées (Quote Reply) et les réactions émojis.
+ */
+public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    private static final int VIEW_TYPE_SENT = 1;
+    private static final int VIEW_TYPE_RECEIVED = 2;
+
+    private final List<Message> messageList;
+    private final int currentUserId;
+    private String receiverProfileImage;
+    private OnMessageLongClickListener longClickListener;
+    private OnImageClickListener imageClickListener;
+    private OnVideoClickListener videoClickListener;
+    private OnAudioClickListener audioClickListener;
+
+    public interface OnMessageLongClickListener {
+        void onMessageLongClick(Message message);
+    }
+
+    public interface OnImageClickListener {
+        void onImageClick(String imagePath);
+    }
+
+    public interface OnVideoClickListener {
+        void onVideoClick(String videoPath);
+    }
+
+    public interface OnAudioClickListener {
+        void onAudioClick(String audioPath);
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener,
+                       OnImageClickListener imageClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+        this.imageClickListener = imageClickListener;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener,
+                       OnImageClickListener imageClickListener,
+                       OnVideoClickListener videoClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+        this.imageClickListener = imageClickListener;
+        this.videoClickListener = videoClickListener;
+    }
+
+    public ChatAdapter(List<Message> messageList,
+                       int currentUserId,
+                       OnMessageLongClickListener longClickListener,
+                       OnImageClickListener imageClickListener,
+                       OnVideoClickListener videoClickListener,
+                       OnAudioClickListener audioClickListener) {
+        this.messageList = messageList;
+        this.currentUserId = currentUserId;
+        this.longClickListener = longClickListener;
+        this.imageClickListener = imageClickListener;
+        this.videoClickListener = videoClickListener;
+        this.audioClickListener = audioClickListener;
+    }
+
+    public void setOnMessageLongClickListener(OnMessageLongClickListener longClickListener) {
+        this.longClickListener = longClickListener;
+    }
+
+    public void setReceiverProfileImage(String profileImage) {
+        this.receiverProfileImage = profileImage;
+        notifyDataSetChanged();
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        Message message = messageList.get(position);
+        if (message.getSenderId() == currentUserId) {
+            return VIEW_TYPE_SENT;
+        }
+        return VIEW_TYPE_RECEIVED;
+    }
+
+    @NonNull
+    @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(
+            @NonNull ViewGroup parent,
+            int viewType) {
+
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+
+        if (viewType == VIEW_TYPE_SENT) {
+            View view = inflater.inflate(
+                    R.layout.item_message_sent,
+                    parent,
+                    false
+            );
+            return new SentViewHolder(view);
+        } else {
+            View view = inflater.inflate(
+                    R.layout.item_message_received,
+                    parent,
+                    false
+            );
+            return new ReceivedViewHolder(view);
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(
+            @NonNull RecyclerView.ViewHolder holder,
+            int position) {
+
+        Message message = messageList.get(position);
+        String time = formatTime(message.getCreatedAt());
+
+        if (holder instanceof SentViewHolder) {
+            SentViewHolder viewHolder = (SentViewHolder) holder;
+
+            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, viewHolder.layoutVideoContainer, viewHolder.imgVideoThumbnail, viewHolder.layoutAudioContainer, viewHolder.ibAudioPlay, viewHolder.tvAudioDuration, message);
+            bindExtraViews(viewHolder.txtReplyQuote, viewHolder.txtReactionBadge, message);
+
+            viewHolder.txtTime.setText(time);
+
+            // Statut du message envoyé : ✓ (envoyé), ✓✓ gris (distribué), ✓✓ bleu (lu)
+            if (message.isRead()) {
+                viewHolder.txtStatus.setText("✓✓");
+                viewHolder.txtStatus.setTextColor(Color.parseColor("#2196F3"));
+            } else if (message.isDelivered()) {
+                viewHolder.txtStatus.setText("✓✓");
+                viewHolder.txtStatus.setTextColor(Color.LTGRAY);
+            } else {
+                viewHolder.txtStatus.setText("✓");
+                viewHolder.txtStatus.setTextColor(Color.WHITE);
+            }
+
+        } else if (holder instanceof ReceivedViewHolder) {
+            ReceivedViewHolder viewHolder = (ReceivedViewHolder) holder;
+
+            bindMessageContent(viewHolder.txtMessage, viewHolder.imgMessageImage, viewHolder.layoutVideoContainer, viewHolder.imgVideoThumbnail, viewHolder.layoutAudioContainer, viewHolder.ibAudioPlay, viewHolder.tvAudioDuration, message);
+            bindExtraViews(viewHolder.txtReplyQuote, viewHolder.txtReactionBadge, message);
+
+            viewHolder.txtTime.setText(time);
+            if (viewHolder.imgSenderAvatar != null) {
+                ImageUtils.loadProfileImage(viewHolder.imgSenderAvatar.getContext(), receiverProfileImage, viewHolder.imgSenderAvatar);
+            }
+        }
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if (longClickListener != null) {
+                longClickListener.onMessageLongClick(message);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void bindMessageContent(TextView txtMessage, ImageView imgMessageImage, View layoutVideoContainer, ImageView imgVideoThumbnail, View layoutAudioContainer, View ibAudioPlay, TextView tvAudioDuration, Message message) {
+        if (message.isDeleted()) {
+            imgMessageImage.setVisibility(View.GONE);
+            imgMessageImage.setOnClickListener(null);
+            if (layoutVideoContainer != null) layoutVideoContainer.setVisibility(View.GONE);
+            if (layoutAudioContainer != null) layoutAudioContainer.setVisibility(View.GONE);
+            txtMessage.setVisibility(View.VISIBLE);
+            txtMessage.setText("Ce message a été supprimé 🚫");
+            txtMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+            txtMessage.setTextColor(Color.GRAY);
+            return;
+        }
+
+        txtMessage.setTypeface(null, android.graphics.Typeface.NORMAL);
+
+        if (message.getImagePath() != null && !message.getImagePath().trim().isEmpty()) {
+            imgMessageImage.setVisibility(View.VISIBLE);
+            ImageUtils.loadProfileImage(imgMessageImage.getContext(), message.getImagePath(), imgMessageImage);
+            imgMessageImage.setOnClickListener(v -> {
+                if (imageClickListener != null) {
+                    imageClickListener.onImageClick(message.getImagePath());
+                }
+            });
+        } else {
+            imgMessageImage.setVisibility(View.GONE);
+            imgMessageImage.setOnClickListener(null);
+        }
+
+        if (message.getVideoPath() != null && !message.getVideoPath().trim().isEmpty() && layoutVideoContainer != null && imgVideoThumbnail != null) {
+            layoutVideoContainer.setVisibility(View.VISIBLE);
+            ImageUtils.loadVideoThumbnail(imgVideoThumbnail.getContext(), message.getVideoPath(), imgVideoThumbnail);
+            layoutVideoContainer.setOnClickListener(v -> {
+                if (videoClickListener != null) {
+                    videoClickListener.onVideoClick(message.getVideoPath());
+                }
+            });
+        } else if (layoutVideoContainer != null) {
+            layoutVideoContainer.setVisibility(View.GONE);
+            layoutVideoContainer.setOnClickListener(null);
+        }
+
+        if (message.getAudioPath() != null && !message.getAudioPath().trim().isEmpty() && layoutAudioContainer != null && ibAudioPlay != null) {
+            layoutAudioContainer.setVisibility(View.VISIBLE);
+            if (tvAudioDuration != null) {
+                tvAudioDuration.setText(ImageUtils.getAudioDuration(message.getAudioPath()));
+            }
+            ibAudioPlay.setOnClickListener(v -> {
+                if (audioClickListener != null) {
+                    audioClickListener.onAudioClick(message.getAudioPath());
+                }
+            });
+        } else if (layoutAudioContainer != null) {
+            layoutAudioContainer.setVisibility(View.GONE);
+            ibAudioPlay.setOnClickListener(null);
+        }
+
+        if (message.getMessage() != null && !message.getMessage().trim().isEmpty()) {
+            txtMessage.setVisibility(View.VISIBLE);
+            txtMessage.setText(message.getMessage());
+        } else {
+            txtMessage.setVisibility(View.GONE);
+        }
+    }
+
+    private void bindExtraViews(TextView txtReplyQuote, TextView txtReactionBadge, Message message) {
+        if (message.isDeleted()) {
+            if (txtReplyQuote != null) txtReplyQuote.setVisibility(View.GONE);
+            if (txtReactionBadge != null) txtReactionBadge.setVisibility(View.GONE);
+            return;
+        }
+
+        if (txtReplyQuote != null) {
+            if (message.getReplyToText() != null && !message.getReplyToText().trim().isEmpty()) {
+                txtReplyQuote.setVisibility(View.VISIBLE);
+                txtReplyQuote.setText("↩ " + message.getReplyToText());
+            } else {
+                txtReplyQuote.setVisibility(View.GONE);
+            }
+        }
+
+        if (txtReactionBadge != null) {
+            if (message.getReaction() != null && !message.getReaction().trim().isEmpty()) {
+                txtReactionBadge.setVisibility(View.VISIBLE);
+                txtReactionBadge.setText(message.getReaction());
+            } else {
+                txtReactionBadge.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    @Override
+    public int getItemCount() {
+        return messageList.size();
+    }
+
+    private String formatTime(String dateTime) {
+        try {
+            if (dateTime == null || dateTime.trim().isEmpty()) {
+                return "--:--";
+            }
+
+            SimpleDateFormat inputFormat = new SimpleDateFormat(
+                    "yyyy-MM-dd HH:mm:ss",
+                    Locale.getDefault()
+            );
+
+            Date date = inputFormat.parse(dateTime);
+            if (date == null) {
+                return "--:--";
+            }
+
+            SimpleDateFormat outputFormat = new SimpleDateFormat(
+                    "HH:mm",
+                    Locale.getDefault()
+            );
+
+            return outputFormat.format(date);
+
+        } catch (Exception e) {
+            return "--:--";
+        }
+    }
+
+    public static class SentViewHolder extends RecyclerView.ViewHolder {
+
+        TextView txtMessage;
+        ImageView imgMessageImage;
+        View layoutVideoContainer;
+        ImageView imgVideoThumbnail;
+        View layoutAudioContainer;
+        View ibAudioPlay;
+        TextView tvAudioDuration;
+        TextView txtTime;
+        TextView txtStatus;
+        TextView txtReplyQuote;
+        TextView txtReactionBadge;
+
+        public SentViewHolder(@NonNull View itemView) {
+            super(itemView);
+
+            txtMessage = itemView.findViewById(R.id.txtMessage);
+            imgMessageImage = itemView.findViewById(R.id.imgMessageImage);
+            layoutVideoContainer = itemView.findViewById(R.id.layoutVideoContainer);
+            imgVideoThumbnail = itemView.findViewById(R.id.imgVideoThumbnail);
+            layoutAudioContainer = itemView.findViewById(R.id.layoutAudioContainer);
+            ibAudioPlay = itemView.findViewById(R.id.ibAudioPlay);
+            tvAudioDuration = itemView.findViewById(R.id.tvAudioDuration);
+            txtTime = itemView.findViewById(R.id.txtTime);
+            txtStatus = itemView.findViewById(R.id.txtStatus);
+            txtReplyQuote = itemView.findViewById(R.id.txtReplyQuote);
+            txtReactionBadge = itemView.findViewById(R.id.txtReactionBadge);
+        }
+    }
+
+    public static class ReceivedViewHolder extends RecyclerView.ViewHolder {
+
+        TextView txtMessage;
+        ImageView imgMessageImage;
+        View layoutVideoContainer;
+        ImageView imgVideoThumbnail;
+        View layoutAudioContainer;
+        View ibAudioPlay;
+        TextView tvAudioDuration;
+        TextView txtTime;
+        TextView txtReplyQuote;
+        TextView txtReactionBadge;
+        ImageView imgSenderAvatar;
+
+        public ReceivedViewHolder(@NonNull View itemView) {
+            super(itemView);
+
+            txtMessage = itemView.findViewById(R.id.txtMessage);
+            imgMessageImage = itemView.findViewById(R.id.imgMessageImage);
+            layoutVideoContainer = itemView.findViewById(R.id.layoutVideoContainer);
+            imgVideoThumbnail = itemView.findViewById(R.id.imgVideoThumbnail);
+            layoutAudioContainer = itemView.findViewById(R.id.layoutAudioContainer);
+            ibAudioPlay = itemView.findViewById(R.id.ibAudioPlay);
+            tvAudioDuration = itemView.findViewById(R.id.tvAudioDuration);
+            txtTime = itemView.findViewById(R.id.txtTime);
+            txtReplyQuote = itemView.findViewById(R.id.txtReplyQuote);
+            txtReactionBadge = itemView.findViewById(R.id.txtReactionBadge);
+            imgSenderAvatar = itemView.findViewById(R.id.imgSenderAvatar);
+        }
+    }
+}

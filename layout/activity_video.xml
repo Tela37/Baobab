@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootVideoLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:fitsSystemWindows="true">
+
+    <!-- Conteneur Lecteur Vidéo -->
+    <FrameLayout
+        android:id="@+id/frameVideoContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_centerInParent="true">
+
+        <VideoView
+            android:id="@+id/videoViewMain"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center" />
+
+        <!-- Overlay de re-verrouillage par publicité AdMob -->
+        <LinearLayout
+            android:id="@+id/layoutVideoLockOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#E6000000"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:visibility="visible">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/baoba1" />
+
+            <TextView
+                android:id="@+id/tvLockMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="🎬 Regardez l\'annonce publicitaire pour déverrouiller la vidéo"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnUnlockVideoWithAd"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:backgroundTint="#2E7D32"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="12dp"
+                android:text="🔓 Déverrouiller la vidéo"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Commandes de saut au centre (-10s / +10s) -->
+        <LinearLayout
+            android:id="@+id/layoutCenterControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvSeekRewind"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/circle_background"
+                android:gravity="center"
+                android:text="-10s"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/ibCenterPlayPause"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginHorizontal="24dp"
+                android:background="@drawable/circle_background"
+                android:contentDescription="@string/audio_play_desc"
+                android:src="@android:drawable/ic_media_play"
+                app:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/tvSeekForward"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/circle_background"
+                android:gravity="center"
+                android:text="+10s"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- Barre supérieure de contrôle -->
+    <LinearLayout
+        android:id="@+id/layoutTopBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:background="#80000000"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <ImageButton
+                android:id="@+id/ibVideoBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cancel"
+                android:src="@android:drawable/ic_menu_revert"
+                app:tint="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/tvVideoTitleHeader"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Vidéo BaobabTD 🎥"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <!-- Contrôle Vitesse -->
+            <TextView
+                android:id="@+id/tvSpeedControl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_et"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="4dp"
+                android:text="1.0x"
+                android:textColor="#000000"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <!-- Bouton Signalement -->
+            <ImageButton
+                android:id="@+id/ibVideoReport"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/btn_report_action"
+                android:src="@android:drawable/ic_menu_report_image"
+                app:tint="#FF1744" />
+
+            <!-- Bouton Flèche de téléchargement récompensé (Top-Right) -->
+            <ImageButton
+                android:id="@+id/ibVideoDownloadArrow"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/button"
+                android:contentDescription="@string/watch_ad"
+                android:src="@android:drawable/stat_sys_download"
+                app:tint="#FFFFFF" />
+
+        </LinearLayout>
+
+        <!-- Barre de filtres de catégories -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="6dp"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnCatAll"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Tous"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnCatFilms"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:text="Films &amp; Séries"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnCatTutorials"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:text="Tutoriels"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnCatCulture"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:text="Culture"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnCatEntertainment"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:text="Divertissement"
+                    android:textColor="#FFFFFF"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
+
+        </HorizontalScrollView>
+
+    </LinearLayout>
+
+    <!-- Barre inférieure des temps de lecture -->
+    <LinearLayout
+        android:id="@+id/layoutBottomControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#99000000"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <ImageButton
+            android:id="@+id/ibPlayPauseVideo"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/audio_play_desc"
+            android:src="@android:drawable/ic_media_play"
+            app:tint="#FFFFFF" />
+
+        <!-- Bouton Like ❤️ -->
+        <ImageButton
+            android:id="@+id/ibVideoLike"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/btn_like_action"
+            android:src="@android:drawable/btn_star_big_on"
+            app:tint="#FFC107" />
+
+        <!-- Bouton Comment 💬 -->
+        <ImageButton
+            android:id="@+id/ibVideoComment"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/header_comments"
+            android:src="@android:drawable/ic_menu_send"
+            app:tint="#FFFFFF" />
+
+        <!-- Durée écoulée à gauche -->
+        <TextView
+            android:id="@+id/tvTimeElapsed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="00:00"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
+
+        <!-- Barre de défilement -->
+        <SeekBar
+            android:id="@+id/seekBarVideo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:max="100" />
+
+        <!-- Temps restant à droite -->
+        <TextView
+            android:id="@+id/tvTimeRemaining"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="-00:00"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+</RelativeLayout>

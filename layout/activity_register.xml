@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/imgRegisterLogo"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="Logo Baobab"
+            android:scaleType="centerCrop"
+            android:src="@drawable/baoba1"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginBottom="24dp"
+            android:text="Créer un compte"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <EditText
+            android:id="@+id/etEmail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginVertical="5dp"
+            android:background="@drawable/bg_et"
+            android:drawablePadding="7dp"
+            android:hint="Email"
+            android:inputType="textEmailAddress"
+            android:padding="15sp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:textColor="@color/black"
+            android:textColorHint="@color/grey"
+            app:drawableStartCompat="@drawable/bao_custom_email_input" />
+
+        <EditText
+            android:id="@+id/etPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginVertical="5dp"
+            android:background="@drawable/bg_et"
+            android:drawablePadding="7dp"
+            android:hint="Mot de passe"
+            android:inputType="textPassword"
+            android:maxLength="30"
+            android:padding="15sp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:textColor="@color/black"
+            android:textColorHint="@color/grey"
+            app:drawableStartCompat="@drawable/custom_pass_input" />
+
+        <EditText
+            android:id="@+id/etConfirmPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginVertical="5dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_et"
+            android:drawablePadding="7dp"
+            android:hint="Confirmer le mot de passe"
+            android:inputType="textPassword"
+            android:maxLength="30"
+            android:padding="15sp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:textColor="@color/black"
+            android:textColorHint="@color/grey"
+            app:drawableStartCompat="@drawable/custom_pass_input" />
+
+        <CheckBox
+            android:id="@+id/cbShowPasswordRegister"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Afficher les mots de passe" />
+
+
+        <Button
+            android:id="@+id/btnRegister"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="80dp"
+            android:layout_marginVertical="5dp"
+            android:layout_marginTop="2dp"
+            android:background="@drawable/button"
+            android:gravity="center"
+            android:text="S'inscrire"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:layout_marginTop="12dp"
+            android:indeterminateDrawable="@drawable/pb_bg"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvPrivacyPolicyRegister"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="En vous inscrivant, vous acceptez notre\nPolitique de confidentialité 📄"
+            android:textColor="#2196F3"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/tvLogin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:text="J'ai déjà un compte"
+            android:textColor="#2196F3" />
+
+    </LinearLayout>
+
+</ScrollView>

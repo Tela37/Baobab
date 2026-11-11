@@ -1,0 +1,87 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.google.services)
+}
+
+android {
+    namespace 'td.teladoum.baobab'
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
+
+    defaultConfig {
+        applicationId "td.teladoum.baobab"
+        minSdk 24
+        targetSdk 36
+        versionCode 3
+        versionName "1.0.2"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('baobab-new-key.jks')
+            storePassword 'baobabtchad235td'
+            keyAlias 'baobab-new-key'
+            keyPassword 'baobabtchad235td'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    implementation libs.activity.ktx
+    implementation libs.appcompat
+    implementation libs.constraintlayout
+    implementation libs.material
+    testImplementation libs.junit
+    androidTestImplementation libs.espresso.core
+    androidTestImplementation libs.ext.junit
+
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'com.github.GrenderG:Toasty:1.5.2'
+
+    // Google Sign-In & Facebook Login
+    implementation 'com.google.android.gms:play-services-auth:21.3.0'
+    implementation 'com.facebook.android:facebook-login:17.0.0'
+
+    // Image Cropper
+    implementation 'com.github.CanHub:Android-Image-Cropper:4.5.0'
+
+    // Glide Image Loading & Caching
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
+
+    // Biometric Security
+    implementation 'androidx.biometric:biometric:1.1.0'
+
+    // Firebase
+    implementation platform('com.google.firebase:firebase-bom:33.9.0')
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-database'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-storage'
+    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'com.google.android.recaptcha:recaptcha:18.7.0'
+
+    // Google AdMob Ads & UMP Consent SDK
+    implementation 'com.google.android.gms:play-services-ads:23.0.0'
+    implementation 'com.google.android.ump:user-messaging-platform:3.1.0'
+
+}

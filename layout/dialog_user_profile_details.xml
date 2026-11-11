@@ -1,0 +1,463 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorProfile">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbarProfileUser2"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="#2E7D32"
+                app:title="Profil Utilisateur"
+                app:titleTextColor="#FFFFFF" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/imgProfileAvatar"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_below="@+id/toolbarProfileUser2"
+                android:layout_centerHorizontal="true"
+                android:layout_marginBottom="20dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_profile"
+                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+            <TextView
+                android:id="@+id/tvDialogName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/imgProfileAvatar"
+                android:layout_marginTop="15dp"
+                android:text="Nom de profile"
+                android:textAlignment="center"
+                android:textColor="@android:color/background_light"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/status_person_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/tvDialogName"
+                android:layout_marginHorizontal="20sp"
+                android:gravity="center"
+                android:hint="Bio"
+                android:maxLines="3"
+                android:textColor="@android:color/background_light"
+                android:textColorHint="@color/white"
+                android:textSize="15sp"
+                android:textStyle="italic" />
+
+            <LinearLayout
+                android:id="@+id/linearLayoutU"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/status_person_profile"
+                android:layout_marginBottom="10dp"
+                android:orientation="vertical">
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@color/grey" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="15dp"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_marginEnd="10dp"
+                            android:drawablePadding="1dp"
+                            android:hint="Date de naissance et genre"
+                            android:textColor="@android:color/white"
+                            android:textColorHint="@android:color/white"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            app:drawableStartCompat="@drawable/calendrier" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="30dp"
+                        android:layout_marginEnd="10dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvDialogDob"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_marginStart="35dp"
+                            android:src="@drawable/person"
+                            android:text="jour/mois/année"
+                            android:textColor="@android:color/white"
+                            android:textColorHint="@android:color/white"
+                            android:textSize="20sp" />
+
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey"
+                    app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                    tools:layout_editor_absoluteX="0dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Genre"
+                    android:paddingStart="20dp"
+                    android:textAlignment="viewStart"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/genre_person_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="15sp"
+                    app:drawableStartCompat="@drawable/genre" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey"
+                    app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                    tools:layout_editor_absoluteX="0dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Profession"
+                    android:paddingStart="20dp"
+                    android:textAlignment="viewStart"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+
+                <TextView
+                    android:id="@+id/profession_person_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="15sp"
+                    app:drawableStartCompat="@drawable/bao_work_1" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey"
+                    app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                    tools:layout_editor_absoluteX="0dp" />
+
+                <TextView
+                    android:id="@+id/situa_am"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="15dp"
+                    android:hint="Situation amoureuse"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/matrimonial_person_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="2dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    android:textStyle="italic"
+                    app:drawableStartCompat="@drawable/amour1" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey"
+                    app:layout_constraintTop_toBottomOf="@+id/telephone_f1"
+                    tools:layout_editor_absoluteX="0dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Email"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDialogEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    app:drawableStartCompat="@drawable/bao_custom_email_input" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey" />
+
+                <TextView
+                    android:id="@+id/telephone_person_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Téléphone"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/phone_person_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:clickable="true"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    app:drawableLeftCompat="@drawable/bao_phone_1" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Quartier "
+                    android:paddingStart="20dp"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDialogNeighborhood"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:clickable="true"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    app:drawableLeftCompat="@drawable/ville" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Ville"
+                    android:paddingStart="20dp"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDialogCity"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:clickable="true"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp"
+                    app:drawableLeftCompat="@drawable/bao_quartier" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="50dp"
+                    android:layout_marginEnd="10dp"
+                    android:background="@color/grey" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:drawablePadding="20dp"
+                    android:hint="Pays"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:textColorHint="@android:color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvDialogCountry"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:clickable="true"
+                    android:drawablePadding="3dp"
+                    android:paddingStart="17dp"
+                    android:paddingEnd="17dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="13sp"
+                    app:drawableLeftCompat="@drawable/pays1" />
+
+                <TableRow
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/grey" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="10dp"
+                    android:layout_marginVertical="5dp">
+
+                    <Button
+                        android:id="@+id/ajouetr_person_profil"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/button"
+                        android:gravity="center"
+                        android:padding="5dp"
+                        android:text="Ajouter"
+                        android:textAllCaps="false"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnDialogChat"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginEnd="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/button"
+                        android:gravity="center"
+                        android:padding="5dp"
+                        android:text="💬"
+                        android:textAllCaps="false"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnBlockUser"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_weight="1"
+                        android:background="@drawable/button_red"
+                        android:gravity="center"
+                        android:padding="5dp"
+                        android:text="Bloquer"
+                        android:textAllCaps="false"
+                        android:textColor="@color/white"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </RelativeLayout>
+    </ScrollView>
+</RelativeLayout>

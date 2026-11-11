@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "960085789498",
+    "firebase_url": "https://baobabtm-126b5-default-rtdb.firebaseio.com",
+    "project_id": "baobabtm-126b5",
+    "storage_bucket": "baobabtm-126b5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960085789498:android:4a32826c7f95dff342de03",
+        "android_client_info": {
+          "package_name": "td.teladoum.baobab"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9pfXWrJAsHeBV6z5SrttHB_rsFebc_rY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960085789498:android:8558767003e4aef942de03",
+        "android_client_info": {
+          "package_name": "td.teladoum.messagetd"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9pfXWrJAsHeBV6z5SrttHB_rsFebc_rY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
